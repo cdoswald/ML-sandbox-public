@@ -1,0 +1,12 @@
+services:
+  cpp_env:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cpp-dev-image
+    container_name: cpp-dev-container
+    ports:
+      - "8002:8002"
+    volumes:
+      - "/c/Users/chris/GitHub/ML-sandbox-public/object_detection:/workspace"
+    tty: true

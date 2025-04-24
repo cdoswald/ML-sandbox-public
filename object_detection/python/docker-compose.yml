@@ -1,0 +1,12 @@
+services:
+  python_env:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: python-dev-image
+    container_name: python-dev-container
+    ports:
+      - "8003:8003"
+    volumes:
+      - "/c/Users/chris/GitHub/ML-sandbox-public/object_detection/python:/workspace"
+    tty: true

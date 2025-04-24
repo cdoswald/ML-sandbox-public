@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y \
     sudo \
     wget \
     unzip \
+    ffmpeg \
     libopencv-dev \
     python3-opencv \
     libjpeg-dev \

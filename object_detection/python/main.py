@@ -1,13 +1,15 @@
 """Real-time object detection with YOLOv11."""
 
 import cv2
+import json
 import PIL
-import matplotlib.pyplot as plt
-import matplotlib as mpl
 import re
 import subprocess
 import time
 from typing import Optional
+
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 from ultralytics import YOLO
 
@@ -38,11 +40,16 @@ def annotate_video(
     input_path: str,
     output_path: str,
     YOLO_model_path: str = "yolo11n.pt",
+    real_time_display: bool = False,
 ) -> None:
     """Detect objects in input video and save annotated output video."""
 
-    # Load YOLO model
     start_time = time.time()
+    if real_time_display:
+        break_key = "q"
+        print(f"Displaying video in real-time. Press {break_key} to break early.")
+
+    # Load YOLO model
     model = YOLO(YOLO_model_path)
 
     # Load input video
@@ -111,6 +118,12 @@ def annotate_video(
         # Write to output file
         output.write(frame)
 
+        # Display in real-time (if applicable)
+        if real_time_display:
+            cv2.imshow("Annotated Video", frame)
+        if cv2.waitKey(1) & 0xFF == ord(break_key):
+            break
+
     # Clean-up
     cap.release()
     output.release()
@@ -120,9 +133,17 @@ def annotate_video(
     print(f"Total annotation time: {end_time - start_time:.3f} seconds")
 
 
-if __name__ == "__main__":
+def main():
+    """Load config and annotate video."""
+    with open("config.json", "r") as file:
+        config = json.load(file)
     annotate_video(
-        input_path="videos/test_video.mp4",
-        output_path="videos/test_video_annotated.mp4",
-        YOLO_model_path="models/yolo11n.pt",
+        input_path=config["input_path"],
+        output_path=config["output_path"],
+        YOLO_model_path=config["YOLO_model_path"],
+        real_time_display=config["real_time_display"],
     )
+
+
+if __name__ == "__main__":
+    main()

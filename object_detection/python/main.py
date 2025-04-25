@@ -18,6 +18,7 @@ FRAME_ROTATION_CODES = {
     -90: cv2.ROTATE_90_CLOCKWISE,
     90: cv2.ROTATE_90_COUNTERCLOCKWISE,
     180: cv2.ROTATE_180,
+    -180: cv2.ROTATE_180,
 }
 
 # Define functions

@@ -1,0 +1,6 @@
+{
+	"input_path":"videos/test_video.mp4",
+	"output_path":"videos/test_video_annotated.mp4",
+	"YOLO_model_path":"models/yolo11n.onnx",
+	"real_time_display":true
+}

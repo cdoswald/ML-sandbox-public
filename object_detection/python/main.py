@@ -30,7 +30,7 @@ def check_video_rotation(filepath: str) -> Optional[int]:
         filepath
     ]
     metadata = subprocess.check_output(cmd).decode("utf-8")
-    rot_match = re.search(r'"rotation": [\-\d\.]+', metadata)
+    rot_match = re.search(r'"rotation":\s*-?\d+', metadata)
     if rot_match:
         return int(rot_match.group().replace('"rotation": ', ''))
     return

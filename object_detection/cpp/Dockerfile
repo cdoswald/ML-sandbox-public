@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     libopencv-dev \
     libprotobuf-dev \
     protobuf-compiler \
+    nlohmann-json3-dev \
     && apt-get clean
 
 # Set environment variables

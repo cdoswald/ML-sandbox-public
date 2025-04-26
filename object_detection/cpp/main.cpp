@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <format>
 #include <fstream>
+#include <nlohmann/json.hpp>
 #include <iostream>
 #include <map>
 #include <regex>
@@ -10,6 +11,8 @@
 
 #include <opencv2/opencv.hpp>
 #include <onnxruntime_cxx_api.h>
+
+using json = nlohmann::json;
 
 
 int check_video_rotation(const std::string &filepath) {
@@ -35,28 +38,62 @@ int check_video_rotation(const std::string &filepath) {
 
 int main (){
 
-    // Specify constants
-    const std::string video_path = "videos/test_video.mp4";
+    // Read config file
+    std::ifstream f("config.json");
+    json config = json::parse(f);
 
-    std::map<int, int> frame_rot_codes = { // note that this differs from Python version
+    // Extract constants from config
+    const std::string input_path = config.at("input_path");
+    const std::string output_path = config.at("output_path");
+    const std::string model_path = config.at("YOLO_model_path");
+    const bool real_time_display = config.at("real_time_display");
+
+    // Define rotations to apply based on video metadata
+    // (note that this differs from Python version)
+    std::map<int, int> frame_rot_codes = { 
         {-90, cv::ROTATE_180},
         {90, cv::ROTATE_180}
     };
 
     // Check if original video is rotated (e.g., iPhone camera)
-    const int frame_rot_deg = check_video_rotation(video_path);
+    const int frame_rot_deg = check_video_rotation(input_path);
     if (frame_rot_deg == -1) throw std::runtime_error("Video metadata check was unsuccessful.");
     bool rotate = frame_rot_codes.count(frame_rot_deg) > 0;
     int rotation_code = rotate? frame_rot_codes[frame_rot_deg] : -1;
 
+    // Create ONNX runtime
+    Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "YOLOv11");
+    Ort::SessionOptions session_options;
+    session_options.SetIntraOpNumThreads(1);
+    Ort::Session session(env, model_path.c_str(), session_options);
+
+    Ort::AllocatorWithDefaultOptions allocator;
+    Ort::MemoryInfo memory_info = Ort::MemoryInfo::CreateCpu(
+        OrtArenaAllocator, OrtMemTypeDefault
+    );
+
+    // Get expected model input dims
+    auto input_name = session.GetInputNameAllocated(0, allocator);
+    const char* input_names[] = { input_name.get() };
+    size_t num_inputs = session.GetInputCount();
+    if (num_inputs != 1) {
+        std::cerr << "Error: Model was expected to have 1 input, but " 
+            << num_inputs << " inputs reported." << std::endl;
+        throw std::runtime_error("Unexpected number of model inputs");
+    }
+    auto input_type_info = session.GetInputTypeInfo(0);
+    auto input_tensor_info = input_type_info.GetTensorTypeAndShapeInfo();
+    std::vector<int64_t> input_dims = input_tensor_info.GetShape();
+
     // Start video capture
-    cv::VideoCapture cap{video_path};
+    cv::VideoCapture cap{input_path};
     cv::Mat frame;
 
     // Determine delay time (for breaking early)
     double fps = cap.get(cv::CAP_PROP_FPS);
     int delay = static_cast<int>(1000 / fps);
 
+    // Start object detection
     while (cap.isOpened()) {
         cap >> frame;
         if (frame.empty()) {
@@ -82,33 +119,7 @@ int main (){
     return 0;
 
 
-    // // Specify constants
-    // const int height = 640;
-    // const int width = 640;
-    // const int channels = 3;
 
-    // const std::string model_path = "models/yolo11n.onnx";
-    // const std::string video_path = "videos/test_video.mp4";
-
-    // // Load YOLOv11 model weights
-    // Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "YOLOv11");
-    // Ort::SessionOptions session_options;
-    // session_options.SetIntraOpNumThreads(1);
-    // Ort::Session session(env, model_path.c_str(), session_options);
-
-    // Ort::AllocatorWithDefaultOptions allocator;
-    // Ort::MemoryInfo memory_info = Ort::MemoryInfo::CreateCpu(
-    //     OrtArenaAllocator, OrtMemTypeDefault
-    // );
-
-    // // Specify input details
-    // auto input_name = session.GetInputNameAllocated(0, allocator);
-    // const char* input_names[] = { input_name.get() };
-    // std::vector<int64_t> input_dims = {1, channels, height, width};
-    // size_t input_tensor_size = 1 * channels * height * width;
-
-    // // Load image
-    // cv::Mat image = cv::imread(image_path);
 
     // // Flatten image
     // cv::Mat resized;

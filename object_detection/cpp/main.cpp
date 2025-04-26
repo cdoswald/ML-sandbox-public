@@ -1,3 +1,5 @@
+// Real-time object detection with YOLOv11.
+
 #include <cstdio>
 #include <cstdlib>
 #include <format>
@@ -85,6 +87,10 @@ int main (){
     auto input_tensor_info = input_type_info.GetTensorTypeAndShapeInfo();
     std::vector<int64_t> input_dims = input_tensor_info.GetShape();
 
+    const int input_channels = input_dims.at(1);
+    const int input_height = input_dims.at(2);
+    const int input_width = input_dims.at(3);
+
     // Start video capture
     cv::VideoCapture cap{input_path};
     cv::Mat frame;
@@ -104,7 +110,41 @@ int main (){
         if (rotate) {
             cv::rotate(frame, frame, rotation_code);
         }
+        cv::Mat proc_frame = cv::dnn::blobFromImage(
+            frame,
+            1.0/255.0, // rescale
+            cv::Size(input_width, input_height), // resize
+            {}, // don't subtract mean
+            true //swap color channels (BGR -> RGB)
+        );
     
+        // Create input tensor object
+        Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
+            memory_info,
+            proc_frame.ptr<float>(),
+            proc_frame.total(),
+            input_dims.data(),
+            input_dims.size()
+        );
+
+        // Run model forward pass
+        auto output_name = session.GetOutputNameAllocated(0, allocator);
+        const char* output_names[] = { output_name.get() };
+        auto output = session.Run(
+            Ort::RunOptions{nullptr},
+            input_names,
+            &input_tensor,
+            num_inputs,
+            output_names,
+            1 // output count
+        );
+
+
+
+
+
+
+
         cv::imshow("Video", frame);
         if (cv::waitKey(delay) >= 0) {
             break;
@@ -121,40 +161,7 @@ int main (){
 
 
 
-    // // Flatten image
-    // cv::Mat resized;
-    // cv::resize(image, resized, cv::Size(height, width));
-    // resized.convertTo(resized, CV_32F, 1.0 / 255);
-    
-    // std::vector<float> input_tensor_values;
-    // for (int c = 0; c < channels; ++c) {
-    //     for (int y = 0; y < resized.rows; ++y) {
-    //         for (int x = 0; x < resized.cols; ++x) {
-    //             input_tensor_values.push_back(resized.at<cv::Vec3f>(y, x)[c]);
-    //         }
-    //     }
-    // }
 
-    // // Create input tensor object
-    // Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
-    //     memory_info,
-    //     input_tensor_values.data(),
-    //     input_tensor_size,
-    //     input_dims.data(),
-    //     input_dims.size()
-    // );
-
-    // // Forward pass
-    // auto output_name = session.GetOutputNameAllocated(0, allocator);
-    // const char* output_names[] = { output_name.get() };
-    // auto output_tensors = session.Run(
-    //     Ort::RunOptions{nullptr},
-    //     input_names,
-    //     &input_tensor,
-    //     1,
-    //     output_names,
-    //     1
-    // );
 
     // // Extract output
     // float* output_data = output_tensors.front().GetTensorMutableData<float>();

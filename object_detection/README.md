@@ -8,5 +8,5 @@ Each implementation has separate Docker and config files. To run the application
 
 (NOTE: the applications have only been tested on `.mp4` videos shot on iPhone 14)
 
-<img src="object_detection/ex_frame.jpg" width="25%">
+<img src="ex_frame.jpg" width="25%">
 

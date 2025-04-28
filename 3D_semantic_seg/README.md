@@ -1,5 +1,5 @@
-# 3D Semantic Segmentation (Waymo Open Dataset)
+## 3D Semantic Segmentation (Waymo Open Dataset Challenge)
 
-[Original challenge description](https://waymo.com/open/challenges/)
+The original description for Waymo's 3D Semantic Segmentation challenge is available [here](https://waymo.com/open/challenges/). 
 
-[`waymo-open-dataset` package](https://github.com/waymo-research/waymo-open-dataset/tree/master)
+Waymo has also made the source code for the `waymo-open-dataset` package available on GitHub [here](https://github.com/waymo-research/waymo-open-dataset/tree/master).

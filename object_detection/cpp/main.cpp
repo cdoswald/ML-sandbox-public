@@ -44,6 +44,10 @@ int main (){
     std::ifstream f("config.json");
     json config = json::parse(f);
 
+    // Read class names file
+    std::ifstream g("class_names.json");
+    json class_names = json::parse(g);
+
     // Extract constants from config
     const std::string input_path = config.at("input_path");
     const std::string output_path = config.at("output_path");
@@ -95,9 +99,10 @@ int main (){
     cv::VideoCapture cap{input_path};
     cv::Mat frame;
 
-    // Determine delay time (for breaking early)
-    double fps = cap.get(cv::CAP_PROP_FPS);
-    int delay = static_cast<int>(1000 / fps);
+    // // Determine delay time (for breaking early)
+    // double fps = cap.get(cv::CAP_PROP_FPS);
+    // int delay = static_cast<int>(1000 / fps);
+    int delay = 1;
 
     // Start object detection
     while (cap.isOpened()) {
@@ -143,25 +148,24 @@ int main (){
         std::vector<int64_t> output_shape = output.front().GetTensorTypeAndShapeInfo().GetShape();
         size_t output_size = output.front().GetTensorTypeAndShapeInfo().GetElementCount();
         float* output_data = output.front().GetTensorMutableData<float>();
-
-        // std::cout << "Output tensor size: " << output_size << std::endl;
-        // std::cout << "Output shape: ";
-        // for (const auto &dim : output_shape) {
-        //     std::cout << dim << " ";
-        // }
-        // std::cout << std::endl;
-
         // output is 1 x 84 x 8400 shape (705600 total)
 
         // Process predicted bounding boxes
         int preds_per_box = output_shape.at(1);
         int num_boxes = output_shape.at(2);
 
-        float conf_threshold = 0.25;
         int num_classes = 80;
+        float conf_threshold = 0.25;
+        float nms_threshold = 0.5;
+    
+        // Calculate scale coefficient to map pixels to original frame
+        float scale_x = frame.cols / static_cast<float>(input_width);
+        float scale_y = frame.rows / static_cast<float>(input_height);
 
         // Loop over all proposed bounding boxes
-        std::vector<std::vector<float>> saved_detections;
+        std::vector<cv::Rect> boxes;
+        std::vector<float> confidences;
+        std::vector<int> class_idxs;
         for (size_t k = 0; k < num_boxes; ++k) {
 
             // Get highest probability class for each proposed bbox
@@ -183,43 +187,60 @@ int main (){
                 float bbox_width = output_data[2 * num_boxes + k];
                 float bbox_height = output_data[3 * num_boxes + k];
 
-                // Convert to (x1, y1), (x2, y2) coords
-                float x1 = x_center - bbox_width / 2;
-                float y1 = y_center - bbox_height / 2;
-                float x2 = x_center + bbox_width / 2;
-                float y2 = y_center + bbox_height / 2;
-                saved_detections.push_back(
-                    {x1, y1, x2, y2, max_class_idx, max_class_prob}
-                );
+                // Convert to (x1, y1, w, h) coords and scale bbox 
+                // coords to match original frame dimensions
+                int x1 = static_cast<int>((x_center - bbox_width / 2) * scale_x);
+                int y1 = static_cast<int>((y_center - bbox_height / 2) * scale_y);
+                int w = static_cast<int>(bbox_width * scale_x);
+                int h = static_cast<int>(bbox_height * scale_y);
+
+                boxes.emplace_back(cv::Rect(x1, y1, w, h));
+                confidences.push_back(max_class_prob);
+                class_idxs.push_back(max_class_idx);
             }
         }
 
-        // Loop over final bounding boxes and display on image
-        for (std::vector<float> bbox_data : saved_detections) {
+        // Apply non-max suppression
+        std::vector<int> idxs;
+        cv::dnn::NMSBoxes(boxes, confidences, conf_threshold, nms_threshold, idxs);
 
-            // Scale bbox coords to match original frame dimensions
-            float scale_x = frame.cols / static_cast<float>(input_width);
-            float scale_y = frame.rows / static_cast<float>(input_height);
+        // Display bounding boxes and class labels/scores on original frame
+        cv::Scalar bbox_color = cv::Scalar(255, 0, 0);
+        cv::Scalar font_color = cv::Scalar(255, 255, 255);
+        cv::Scalar font_bground_color = cv::Scalar(255, 0, 0);
+        int font_face = cv::FONT_HERSHEY_SIMPLEX;
+        double font_scale = 0.5;
+    
+        for (int idx : idxs) {
+            cv::Rect box = boxes.at(idx);
+            int class_idx = class_idxs.at(idx);
+            float class_conf = confidences.at(idx);
 
-            int x1 = static_cast<int>(bbox_data.at(0) * scale_x);
-            int y1 = static_cast<int>(bbox_data.at(1) * scale_y);
-            int x2 = static_cast<int>(bbox_data.at(2) * scale_x);
-            int y2 = static_cast<int>(bbox_data.at(3) * scale_y);
+            // Add bounding box
+            cv::rectangle(frame, box, bbox_color, 2);
 
+            // Add label
+            int text_baseline = 0;
+            std::string class_name = class_names[class_idx];
+            std::string label = class_name + " " + cv::format("%.2f", class_conf);
+            cv::Size text_size = cv::getTextSize(label, font_face, font_scale, 1, &text_baseline);
+            int text_y = (box.y - 10 > 10) ? (box.y - 10) : (box.y + 10);
             cv::rectangle(
-                frame, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(255, 0, 0), 2
+                frame,
+                cv::Point(box.x, text_y - text_size.height - 5),
+                cv::Point(box.x + text_size.width, text_y + text_baseline - 5),
+                font_bground_color,
+                cv::FILLED
             );
             cv::putText(
-                frame, std::to_string(bbox_data.at(4)), cv::Point(x1, y1),
-                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 1
+                frame, label, cv::Point(box.x, text_y - 5),
+                font_face, font_scale, font_color, 1, cv::LINE_AA
             );
         }
-
         cv::imshow("Video", frame);
         if (cv::waitKey(delay) >= 0) {
             break;
         }
-
     }
 
     // Clean-up

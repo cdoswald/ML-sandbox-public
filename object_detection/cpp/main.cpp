@@ -139,11 +139,81 @@ int main (){
             1 // output count
         );
 
+        // Extract output
+        std::vector<int64_t> output_shape = output.front().GetTensorTypeAndShapeInfo().GetShape();
+        size_t output_size = output.front().GetTensorTypeAndShapeInfo().GetElementCount();
+        float* output_data = output.front().GetTensorMutableData<float>();
 
+        // std::cout << "Output tensor size: " << output_size << std::endl;
+        // std::cout << "Output shape: ";
+        // for (const auto &dim : output_shape) {
+        //     std::cout << dim << " ";
+        // }
+        // std::cout << std::endl;
 
+        // output is 1 x 84 x 8400 shape (705600 total)
 
+        // Process predicted bounding boxes
+        int preds_per_box = output_shape.at(1);
+        int num_boxes = output_shape.at(2);
 
+        float conf_threshold = 0.25;
+        int num_classes = 80;
 
+        // Loop over all proposed bounding boxes
+        std::vector<std::vector<float>> saved_detections;
+        for (size_t k = 0; k < num_boxes; ++k) {
+
+            // Get highest probability class for each proposed bbox
+            float max_class_prob = 0.0;
+            float max_class_idx = -1.0;
+            for (size_t m = 0; m < num_classes; ++m) {
+                float class_prob = output_data[num_boxes * (4 + m) + k];
+                if (class_prob > max_class_prob) {
+                    max_class_prob = class_prob;
+                    max_class_idx = m;
+                }
+            }
+
+            // Retain bbox coords and class label
+            // if highest class probability is at/above confidence threshold
+            if (max_class_prob >= conf_threshold) {
+                float x_center = output_data[0 * num_boxes + k];
+                float y_center = output_data[1 * num_boxes + k];
+                float bbox_width = output_data[2 * num_boxes + k];
+                float bbox_height = output_data[3 * num_boxes + k];
+
+                // Convert to (x1, y1), (x2, y2) coords
+                float x1 = x_center - bbox_width / 2;
+                float y1 = y_center - bbox_height / 2;
+                float x2 = x_center + bbox_width / 2;
+                float y2 = y_center + bbox_height / 2;
+                saved_detections.push_back(
+                    {x1, y1, x2, y2, max_class_idx, max_class_prob}
+                );
+            }
+        }
+
+        // Loop over final bounding boxes and display on image
+        for (std::vector<float> bbox_data : saved_detections) {
+
+            // Scale bbox coords to match original frame dimensions
+            float scale_x = frame.cols / static_cast<float>(input_width);
+            float scale_y = frame.rows / static_cast<float>(input_height);
+
+            int x1 = static_cast<int>(bbox_data.at(0) * scale_x);
+            int y1 = static_cast<int>(bbox_data.at(1) * scale_y);
+            int x2 = static_cast<int>(bbox_data.at(2) * scale_x);
+            int y2 = static_cast<int>(bbox_data.at(3) * scale_y);
+
+            cv::rectangle(
+                frame, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(255, 0, 0), 2
+            );
+            cv::putText(
+                frame, std::to_string(bbox_data.at(4)), cv::Point(x1, y1),
+                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 1
+            );
+        }
 
         cv::imshow("Video", frame);
         if (cv::waitKey(delay) >= 0) {
@@ -157,75 +227,4 @@ int main (){
     cv::destroyAllWindows();
 
     return 0;
-
-
-
-
-
-
-    // // Extract output
-    // float* output_data = output_tensors.front().GetTensorMutableData<float>();
-    // size_t output_size = output_tensors.front().GetTensorTypeAndShapeInfo().GetElementCount();
-    // std::vector<int64_t> output_shape = output_tensors.front().GetTensorTypeAndShapeInfo().GetShape();
-
-    // std::cout << "Output tensor size: " << output_size << std::endl;
-    // std::cout << "Output shape: ";
-    // for (const auto& dim : output_shape) {
-    //     std::cout << dim << " ";
-    // }
-    // std::cout << std::endl;
-
-    // // Process inference result
-    // int dimensions = output_shape.at(1);
-    // int num_detections = output_shape.at(2);
-
-    // float conf_threshold = 0.5;
-
-    // for (int i = 0; i < num_detections; ++i) {
-
-    //     // Get object probability
-    //     float obj_conf = output_data[i * dimensions + 4];
-    //     if (obj_conf < conf_threshold) continue;
-
-    //     // Get highest score class
-    //     float max_score = 0;
-    //     int class_id = -1;
-    //     for (int c = 5; c < dimensions; ++c) {
-    //         float score = output_data[i * dimensions + c];
-    //         if (score > max_score) {
-    //             max_score = score;
-    //             class_id = c - 5;
-    //         }
-    //     }
-
-    //     if (max_score * obj_conf < conf_threshold) continue;
-
-    //     // Get bounding box predictions
-    //     float cx = output_data[i * dimensions + 0];
-    //     float cy = output_data[i * dimensions + 1];
-    //     float w = output_data[i * dimensions + 2];
-    //     float h = output_data[i * dimensions + 3];
-
-    //     std::cout << "Bbox predictions (not scaled): (" << cx << ", " << cy << ", " << w << ", " << h << ")" << std::endl;
-
-    //     // Convert bounding box predictions from center (x,y) to top-left (x,y)
-    //     int x = static_cast<int>((cx - w/2.0) * resized.cols);
-    //     int y = static_cast<int>((cy - h/2.0) * resized.rows);
-    //     int bbox_width = static_cast<int>(w * resized.cols);
-    //     int bbox_height = static_cast<int>(h * resized.rows);
-
-    //     std::cout << "Bounding Box: (" << x << ", " << y << ", " << bbox_width << ", " << bbox_height << ")" << std::endl;
-
-    //     cv::rectangle(resized, cv::Rect(cx, cy, w, h), cv::Scalar(0, 255, 0), 2);
-    //     cv::putText(
-    //         resized, std::to_string(class_id), cv::Point(cx, cy-10),
-    //         cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 255), 1
-    //     );
-
-    // }
-
-    // // Display image with bounding box
-    // cv::imshow("YOLOv11 Output:", resized);
-    // cv::waitKey(0);
-    // return 0;
 }

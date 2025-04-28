@@ -1,5 +1,6 @@
 // Real-time object detection with YOLOv11.
 
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <format>
@@ -40,6 +41,8 @@ int check_video_rotation(const std::string &filepath) {
 
 int main (){
 
+    auto start_time = std::chrono::steady_clock::now();
+
     // Read config file
     std::ifstream f("config.json");
     json config = json::parse(f);
@@ -53,6 +56,10 @@ int main (){
     const std::string output_path = config.at("output_path");
     const std::string model_path = config.at("YOLO_model_path");
     const bool real_time_display = config.at("real_time_display");
+
+    if (real_time_display) {
+        std::cout << "Displaying video in real-time. Press any key to break early." << std::endl;
+    }
 
     // Define rotations to apply based on video metadata
     // (note that this differs from Python version)
@@ -95,14 +102,29 @@ int main (){
     const int input_height = input_dims.at(2);
     const int input_width = input_dims.at(3);
 
-    // Start video capture
+    // Create video capture
     cv::VideoCapture cap{input_path};
     cv::Mat frame;
+    if (!cap.isOpened()) {
+        std::cerr << "Error: could not open input video file" << std::endl;
+        return -1;
+    }
 
     // // Determine delay time (for breaking early)
-    // double fps = cap.get(cv::CAP_PROP_FPS);
-    // int delay = static_cast<int>(1000 / fps);
-    int delay = 1;
+    double fps = cap.get(cv::CAP_PROP_FPS);
+    int delay = static_cast<int>(1000 / fps);
+
+    // Create output video writer
+    int fourcc = cv::VideoWriter::fourcc('m', 'p', '4', 'v');
+    cv::Size frame_size(
+        static_cast<int>(cap.get(cv::CAP_PROP_FRAME_WIDTH)),
+        static_cast<int>(cap.get(cv::CAP_PROP_FRAME_HEIGHT))
+    );
+    cv::VideoWriter video_output(output_path, fourcc, 30.0, frame_size);
+    if (!video_output.isOpened()) {
+        std::cerr << "Error: could not open output video file" << std::endl;
+        return -1;
+    }
 
     // Start object detection
     while (cap.isOpened()) {
@@ -237,7 +259,14 @@ int main (){
                 font_face, font_scale, font_color, 1, cv::LINE_AA
             );
         }
-        cv::imshow("Video", frame);
+
+        // Write to output file
+        video_output.write(frame);
+
+        // Display in real-time (if applicable)
+        if (real_time_display) {
+            cv::imshow("Video", frame);
+        }
         if (cv::waitKey(delay) >= 0) {
             break;
         }
@@ -245,7 +274,12 @@ int main (){
 
     // Clean-up
     cap.release();
+    video_output.release();
     cv::destroyAllWindows();
+
+    auto end_time = std::chrono::steady_clock::now();
+    auto total_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    std::cout << "Total processing time: " << total_time.count() << " ms" << std::endl;
 
     return 0;
 }

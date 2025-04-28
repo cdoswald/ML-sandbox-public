@@ -1,6 +1,6 @@
 ## Object Detection with YOLO
 
-This directory contains object detection implementations in [Python](object_detection/python) and [C++](object_detection/cpp). 
+This directory contains object detection implementations in [Python](python) and [C++](cpp). 
 
 Both implementations use [OpenCV](https://opencv.org/) for video processing and the [YOLO11](https://docs.ultralytics.com/models/yolo11/) model from Ultralytics for object detection. For inference, the Python implementation uses PyTorch while the C++ implementation uses an ONNX Runtime.
 

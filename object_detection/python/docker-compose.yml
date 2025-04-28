@@ -8,5 +8,5 @@ services:
     ports:
       - "8003:8003"
     volumes:
-      - "/c/Users/chris/GitHub/ML-sandbox-public/object_detection/python:/workspace"
+      - ".:/workspace"
     tty: true

@@ -1,0 +1,11 @@
+services:
+  waymo-od-env:
+    build: 
+      context: .
+    image: waymo-od-image
+    container_name: waymo-od-container
+    ports:
+      - "8001:8001"
+    volumes:
+      - ".:/workspace/hostfiles"
+    tty: true

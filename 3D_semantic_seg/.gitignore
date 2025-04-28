@@ -1,0 +1,19 @@
+# Data files
+*.parquet
+*.tfrecord
+data/
+
+# Jupyter notebook intermediate files
+*.ipynb_checkpoints/
+
+# Log files
+*.log
+
+# pycache files
+__pycache__/
+
+# archive files
+_archive/
+
+# docker config
+.devcontainer/

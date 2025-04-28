@@ -1,3 +1,7 @@
+# Images and videos
+images/
+videos/
+
 # Dev container settings
 .devcontainer/
 

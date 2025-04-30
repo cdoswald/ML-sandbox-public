@@ -67,7 +67,7 @@ def load_parquet_data(
     row_filter = None
     if filter_rows is not None:
         filter_exprs = [(pds.field(col) == val) for col, val in filter_rows.items()]
-        row_filter = reduce(operator.and_, expressions)
+        row_filter = reduce(operator.and_, filter_exprs)
     if subset_cols is None:
         subset_cols = data.schema.names
     return data.to_table(filter=row_filter, columns=subset_cols)

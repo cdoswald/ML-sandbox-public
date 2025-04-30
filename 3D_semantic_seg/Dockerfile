@@ -1,6 +1,10 @@
 # Base image
 FROM continuumio/miniconda3
 
+# Install Linux packages
+RUN apt-get update && apt-get install -y \
+	libgl1
+
 # Copy environment file
 COPY environment.yml /workspace/environment.yml
 
@@ -19,4 +23,4 @@ RUN source ~/.bashrc && \
 	conda activate waymo_open_env && \
 	apt-get update && apt-get install -y git && \
 	git clone https://github.com/waymo-research/waymo-open-dataset.git /workspace/waymo-od && \
-	pip install waymo-open-dataset-tf-2-12-0==1.6.4
+	pip install waymo-open-dataset-tf-2-12-0==1.6.4 open3d

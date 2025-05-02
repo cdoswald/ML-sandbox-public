@@ -3,7 +3,12 @@ FROM continuumio/miniconda3
 
 # Install Linux packages
 RUN apt-get update && apt-get install -y \
-	libgl1
+	git \
+	libegl1 \
+	libgl1 \
+	libgomp1 \
+	xvfb \
+	&& rm -rf /var/lib/apt/lists/*
 
 # Copy environment file
 COPY environment.yml /workspace/environment.yml
@@ -17,10 +22,12 @@ RUN conda init bash && \
 # Create Conda environment
 RUN conda env create -f /workspace/environment.yml --platform linux-64
 
-# Activate Conda environment and clone Waymo repo
-SHELL ["conda", "run", "-n", "waymo_open_env", "/bin/bash", "-c"]
+# Clone Waymo repo
 RUN source ~/.bashrc && \
 	conda activate waymo_open_env && \
-	apt-get update && apt-get install -y git && \
 	git clone https://github.com/waymo-research/waymo-open-dataset.git /workspace/waymo-od && \
-	pip install waymo-open-dataset-tf-2-12-0==1.6.4 open3d
+	pip install waymo-open-dataset-tf-2-12-0==1.6.4
+
+# Set default env
+ENV CONDA_DEFAULT_ENV=waymo_open_env
+ENV PATH /opt/conda/envs/waymo_open_env/bin:$PATH

@@ -18,7 +18,9 @@ tf.enable_eager_execution()
 
 from waymo_open_dataset import dataset_pb2 as wod
 
-
+## ------------------------------------------
+## Utility functions for Parquet data format
+## ------------------------------------------
 def get_parquet_col_names(
     data_dir: str,
     file_id: str,
@@ -91,6 +93,9 @@ def filter_table_equal(
         mask = pc.and_kleene(mask, condition_match)
     return table.filter(mask)
 
+## ------------------------------------------
+## Utility functions for TFRecord data format
+## ------------------------------------------
 def load_TFRecord(
     datadir: str,
     filename: str,
@@ -121,16 +126,3 @@ def extract_frames_from_TFRecord(
         if (max_n_frames is not None) and (len(frames) >= max_n_frames):
             break
     return frames
-
-def convert_range_image_to_tensor(
-    range_image: wod.MatrixFloat,
-) -> tf.Tensor:
-    """Convert range image from protocol buffer MatrixFloat object
-    to Tensorflow tensor object.
-
-    Based on https://github.com/waymo-research/waymo-open-dataset/blob/master/tutorial/tutorial.ipynb.
-    """
-    return tf.reshape(
-        tf.convert_to_tensor(range_image.data),
-        range_image.shape.dims
-    )

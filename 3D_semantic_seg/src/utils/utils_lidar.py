@@ -1,5 +1,9 @@
 """LiDAR utility functions for Waymo Open Dataset challenges."""
 
+import numpy as np
+import pyarrow
+
+
 def convert_lidar_range_image_to_xyz_coords(
     lidar_image_table: pyarrow.lib.Table,
     lidar_calib_table: pyarrow.lib.Table,
@@ -14,13 +18,13 @@ def convert_lidar_range_image_to_xyz_coords(
     Returns
 
     """
-    if lidar_return not in [1, 2]:
+    if lidar_return_count not in [1, 2]:
         raise ValueError(
-            f"Lidar return ID must be 1 or 2; got {lidar_return}"
+            f"Lidar return ID must be 1 or 2; got {lidar_return_count}"
         )
 
     # Extract lidar values
-    col_prefix = f"[LiDARComponent].range_image_return{lidar_return}"
+    col_prefix = f"[LiDARComponent].range_image_return{lidar_return_count}"
     lidar_shape = lidar_image_table.column(f"{col_prefix}.shape").combine_chunks().to_pylist()[0]
     lidar_vals = np.array(
         lidar_image_table.column(f"{col_prefix}.values").combine_chunks().to_pylist()[0]
@@ -58,6 +62,6 @@ def convert_lidar_range_image_to_xyz_coords(
 
         # Multiply by extrinsics (on left), drop homogenous coord, and reshape
         points = (lidar_extrin_matrix @ homogenous_coords) # 4 x n matrix
-        points = points[:3, :].T.reshape((n_rows, n_cols))
+        points = points[:3, :].T.reshape((n_rows, n_cols, 3))
 
     return points

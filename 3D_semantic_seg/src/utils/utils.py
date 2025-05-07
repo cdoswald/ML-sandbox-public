@@ -74,11 +74,11 @@ def load_parquet_data(
         subset_cols = data.schema.names
     return data.to_table(filter=row_filter, columns=subset_cols)
 
-def filter_table_equal(
+def filter_rows_equal(
     table: pyarrow.lib.Table,
     filter_dict: Dict[str, Union[str, int, float]],
 ) -> pyarrow.lib.Table:
-    """Filter pyarrow table using equality matches.
+    """Filter rows of pyarrow table using equality matching.
 
     Args
         table: pyarrow table to filter

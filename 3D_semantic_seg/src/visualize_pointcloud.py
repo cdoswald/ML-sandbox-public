@@ -2,7 +2,7 @@ import numpy as np
 import open3d as o3d
 
 POINTCLOUD_PATH = "../pointcloud.npz"
-CAM_ZOOM = 0.25
+CAM_ZOOM = 0.2
 
 data = np.load(POINTCLOUD_PATH)
 
@@ -13,10 +13,10 @@ if len(points.shape) > 2:
 pcd = o3d.geometry.PointCloud()
 pcd.points = o3d.utility.Vector3dVector(points)
 
-cam_position = np.array([0, 0, 1])
 cam_lookat = np.array([0, 0, 0])
-cam_up = np.array([0, 1, 0])
-cam_front = cam_lookat - cam_position
+cam_up = np.array([0, 0, -1])
+cam_front = np.array([-1, 0, -1])
+cam_front = cam_front / np.linalg.norm(cam_front)
 
 vis = o3d.visualization.Visualizer()
 vis.create_window()

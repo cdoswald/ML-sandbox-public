@@ -31,10 +31,10 @@ def convert_lidar_range_image_to_xyz_coords(
         lidar_image_table.column(f"{col_prefix}.values").combine_chunks().to_pylist()[0]
     ).reshape(lidar_shape)[..., lidar_return_type]
 
-    # import matplotlib.pyplot as plt
-    # plt.imshow(lidar_vals)
-    # plt.colorbar()
-    # plt.show()
+    import matplotlib.pyplot as plt
+    plt.imshow(lidar_vals)
+    plt.colorbar()
+    plt.show()
 
     # Create grid of azimuth angles x beam inclination angles
     # (sky has negative lidar beam inclination, ground has positive)

@@ -10,7 +10,6 @@ def convert_lidar_range_image_to_xyz_coords(
     lidar_return_count: int = 1,
     lidar_return_type: int = 0,
     convert_to_world_ref: bool = True,
-    rh_coord_system: bool = True,
 ):
     """Project 2D LiDAR range image values to 3D coordinates.
 
@@ -31,28 +30,25 @@ def convert_lidar_range_image_to_xyz_coords(
         lidar_image_table.column(f"{col_prefix}.values").combine_chunks().to_pylist()[0]
     ).reshape(lidar_shape)[..., lidar_return_type]
 
-    import matplotlib.pyplot as plt
-    plt.imshow(lidar_vals)
-    plt.colorbar()
-    plt.show()
+    # import matplotlib.pyplot as plt
+    # plt.imshow(lidar_vals)
+    # plt.colorbar()
+    # plt.show()
 
     # Create grid of azimuth angles x beam inclination angles
-    # (sky has negative lidar beam inclination, ground has positive)
+    # (from horizontal plane of sensor, negative lidar beam inclination
+    # points toward ground and positive points toward sky)
     beam_col = "[LiDARCalibrationComponent].beam_inclination.values"
     lidar_beam_incl_vals = np.array(
         lidar_calib_table.column(beam_col).combine_chunks().to_pylist()[0]
     )
-    # (keep positive x-axis the same, and flip y-axis to maintain right-handed
-    # coordinate system with downward positive z-axis; therefore, since row 0 of
-    # range image corresponds to negative z-axis, the azimuth of the middle column
-    # of the range image is 0 (i.e., corresponds to positive x-axis) and increases
-    # from left to right in the range image)
-    max_azimuth = (1 if rh_coord_system else -1) * np.pi
-    lidar_azimuth_vals = np.linspace(-max_azimuth, max_azimuth, num=lidar_shape[1], endpoint=False) # Assume evenly spaced
+    # (reverse to align beam inclination orientation with range image)
+    lidar_beam_incl_vals = lidar_beam_incl_vals[::-1]
+    # (similarly, azimuth should go from pi to -pi to align with range image; assume evenly spaced)
+    lidar_azimuth_vals = np.linspace(np.pi, -np.pi, num=lidar_shape[1], endpoint=False) 
     azimuth_grid, beam_incl_grid = np.meshgrid(lidar_azimuth_vals, lidar_beam_incl_vals)
 
     # Convert to (x,y,z) coords (theta = beam inclination; phi = azimuth; r = distance)
-    # (z negative toward sky, positive toward ground)
     x = lidar_vals * np.cos(beam_incl_grid) * np.cos(azimuth_grid)
     y = lidar_vals * np.cos(beam_incl_grid) * np.sin(azimuth_grid)
     z = lidar_vals * np.sin(beam_incl_grid)

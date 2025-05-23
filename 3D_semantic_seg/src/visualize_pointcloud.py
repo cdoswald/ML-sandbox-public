@@ -14,8 +14,8 @@ pcd = o3d.geometry.PointCloud()
 pcd.points = o3d.utility.Vector3dVector(points)
 
 cam_lookat = np.array([0, 0, 0])
-cam_up = np.array([0, 0, -1])
-cam_front = np.array([-1, 0, -1])
+cam_up = np.array([0, 0, 1])
+cam_front = np.array([-1, 0, 1])
 cam_front = cam_front / np.linalg.norm(cam_front)
 
 vis = o3d.visualization.Visualizer()

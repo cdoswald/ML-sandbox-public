@@ -10,13 +10,19 @@ def convert_lidar_range_image_to_xyz_coords(
     lidar_return_count: int = 1,
     lidar_return_type: int = 0,
     convert_to_world_ref: bool = True,
-):
+) -> np.ndarray:
     """Project 2D LiDAR range image values to 3D coordinates.
 
     Args
+        lidar_image_table: pyarrow table containing LiDAR image
+        lidar_calib_table: pyarrow table containing LiDAR calibration
+        lidar_return_count: index of LiDAR return number (options = {1, 2}; default = 1)
+        lidar_return_type: index of LiDAR return type (default = 0 (distance))
+        convert_to_world_ref: bool indicating whether to convert LiDAR coordinate
+            system to world reference system (default = True)
 
     Returns
-
+        numpy ndarray of (LiDAR rows, LiDAR cols, (x, y, z))
     """
     if lidar_return_count not in [1, 2]:
         raise ValueError(
@@ -66,12 +72,13 @@ def convert_lidar_range_image_to_xyz_coords(
         # Convert (x,y,z) to homogenous coords (x,y,z,1)
         n_rows = points.shape[0]
         n_cols = points.shape[1]
-        flattened_points = points.reshape((-1, 3)).T
-        ones_array = np.ones((1, flattened_points.shape[-1]))
-        homogenous_coords = np.concatenate([flattened_points, ones_array], axis=0)
+        ones_tensor = np.ones((n_rows, n_cols, 1))
+        points = np.concatenate([points, ones_tensor], axis=-1)
 
-        # Multiply by extrinsics (on left), drop homogenous coord, and reshape
-        points = (lidar_extrin_matrix @ homogenous_coords) # 4 x n matrix
-        points = points[:3, :].T.reshape((n_rows, n_cols, 3))
+        # Multiply homogenous coords by lidar extrinsic matrix to convert to world ref
+        points = np.einsum("ij,klj->kli", lidar_extrin_matrix, points)
+
+        # Convert back to (x,y,z) coords
+        points = points[..., :3]
 
     return points

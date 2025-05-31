@@ -1,5 +1,7 @@
 """LiDAR utility functions for Waymo Open Dataset challenges."""
 
+from typing import Optional
+
 import numpy as np
 import pyarrow
 
@@ -7,6 +9,7 @@ import pyarrow
 def convert_lidar_range_image_to_xyz_coords(
     lidar_image_table: pyarrow.lib.Table,
     lidar_calib_table: pyarrow.lib.Table,
+    lidar_segment_table: Optional[pyarrow.lib.Table] = None,
     lidar_return_count: int = 1,
     lidar_return_type: int = 0,
     convert_to_world_ref: bool = True,
@@ -16,6 +19,8 @@ def convert_lidar_range_image_to_xyz_coords(
     Args
         lidar_image_table: pyarrow table containing LiDAR image
         lidar_calib_table: pyarrow table containing LiDAR calibration
+        lidar_segment_table: pyarrow table containing LiDAR semantic segmentation labels 
+            (optional; default = None)
         lidar_return_count: index of LiDAR return number (options = {1, 2}; default = 1)
         lidar_return_type: index of LiDAR return type (default = 0 (distance))
         convert_to_world_ref: bool indicating whether to convert LiDAR coordinate
@@ -80,5 +85,16 @@ def convert_lidar_range_image_to_xyz_coords(
 
         # Convert back to (x,y,z) coords
         points = points[..., :3]
+
+    # Concatenate semantic segmentation labels (if applicable)
+    if lidar_segment_table is not None:
+
+        semseg_col_prefix = f"[LiDARSegmentationLabelComponent].range_image_return{lidar_return_count}"
+        semseg_shape = lidar_segment_table.column(f"{semseg_col_prefix}.shape").combine_chunks().to_pylist()[0]
+        semseg_vals = np.array(
+            lidar_segment_table.column(f"{semseg_col_prefix}.values").combine_chunks().to_pylist()[0]
+        ).reshape(semseg_shape) # Return all final dims (0 is instance ID, 1 is class ID)
+
+        points = np.concatenate([points, semseg_vals], axis=-1)
 
     return points

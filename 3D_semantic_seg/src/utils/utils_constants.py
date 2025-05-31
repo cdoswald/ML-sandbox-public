@@ -65,29 +65,29 @@ def get_semseg_idx_map() -> Dict[int, Dict[str, str]]:
     """Get dictionary mapping 3D semantic segmentation index to label 
     name and color."""
     return {
-        0: {"name": "Car", "color": "darkorange"},
-        1: {"name": "Truck", "color": "orangered"},
-        2: {"name": "Bus", "color": "tomato"},
-        3: {"name": "Motorcyclist", "color": "gold"},
-        4: {"name": "Bicyclist", "color": "khaki"},
-        5: {"name": "Pedestrian", "color": "yellow"},
-        6: {"name": "Sign", "color": "deepskyblue"},
-        7: {"name": "Traffic Light", "color": "dodgerblue"},
-        8: {"name": "Pole", "color": "lightskyblue"},
-        9: {"name": "Construction Cone", "color": "sandybrown"},
-        10: {"name": "Bicycle", "color": "lightgoldenrodyellow"},
-        11: {"name": "Motorcycle", "color": "palegoldenrod"},
-        12: {"name": "Building", "color": "slategray"},
-        13: {"name": "Vegetation", "color": "forestgreen"},
-        14: {"name": "Tree Trunk", "color": "saddlebrown"},
-        15: {"name": "Curb", "color": "darkslategray"},
-        16: {"name": "Road", "color": "dimgray"},
-        17: {"name": "Lane Marker", "color": "gray"},
-        18: {"name": "Walkable", "color": "lightgray"},
-        19: {"name": "Sidewalk", "color": "gainsboro"},
-        20: {"name": "Other Ground", "color": "lightsteelblue"},
-        21: {"name": "Other Vehicle", "color": "lightsalmon"},
-        22: {"name": "Undefined", "color": "black"}
+        0: {"name": "Undefined", "color": "darkgray"},
+        1: {"name": "Car", "color": "teal"},
+        2: {"name": "Truck", "color": "darkturquoise"},
+        3: {"name": "Bus", "color": "cadetblue"},
+        4: {"name": "Other Vehicle", "color": "mediumpurple"},
+        5: {"name": "Motorcyclist", "color": "red"}, # Need confirmation
+        6: {"name": "Bicyclist", "color": "lime"},
+        7: {"name": "Pedestrian", "color": "magenta"},
+        8: {"name": "Sign", "color": "lemonchiffon"},
+        9: {"name": "Traffic Light", "color": "yellow"},
+        10: {"name": "Pole", "color": "darkslategrey"},
+        11: {"name": "Construction Cone", "color": "orange"},
+        12: {"name": "Bicycle", "color": "palegreen"},
+        13: {"name": "Motorcycle", "color": "red"}, # Need confirmation
+        14: {"name": "Building", "color": "burlywood"},
+        15: {"name": "Vegetation", "color": "forestgreen"},
+        16: {"name": "Tree Trunk", "color": "sienna"},
+        17: {"name": "Curb", "color": "darkgoldenrod"},
+        18: {"name": "Road", "color": "black"},
+        19: {"name": "Lane marker", "color": "snow"},
+        20: {"name": "Walkable", "color": "moccasin"},
+        21: {"name": "Other ground", "color": "darkolivegreen"},
+        22: {"name": "Sidewalk", "color": "gainsboro"},
     }
 
 def get_semseg_rgb_map() -> Dict[int, Tuple[float, float, float]]:

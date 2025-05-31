@@ -2,6 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import open3d as o3d
 
+from utils import utils_constants as utl_c
+
+
 POINTCLOUD_PATH = "../pointcloud.npz"
 CAM_ZOOM = 0.2
 
@@ -23,13 +26,7 @@ if points.shape[-1] > 3:
     points_classes = points_semseg[..., 1].flatten()
 
     # Map semseg classes to colormap
-    cmap = plt.get_cmap("tab20")
-    unique_classes = np.unique(points_classes)
-    n_unique_classes = len(unique_classes)
-    color_dict = {
-        label: cmap(i/n_unique_classes)[:3]
-        for i, label in enumerate(unique_classes)
-    }
+    color_dict = utl_c.get_semseg_rgb_map()
     colors = np.array([color_dict[label] for label in points_classes])
     pcd.colors = o3d.utility.Vector3dVector(colors)
 

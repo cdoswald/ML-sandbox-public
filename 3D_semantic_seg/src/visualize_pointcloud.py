@@ -4,14 +4,18 @@ import open3d as o3d
 POINTCLOUD_PATH = "../pointcloud.npz"
 CAM_ZOOM = 0.2
 
+# Load and extract data
 data = np.load(POINTCLOUD_PATH)
-
 points = data["points"]
-if len(points.shape) > 2:
-    points = points.reshape((-1, 3))
 
+# Separate (x,y,z) and semseg labels (if applicable)
+points_xyz = points[..., :3].reshape((-1, 3))
+if points.shape[-1] > 3:
+    points_semseg = points[..., 3:]
+
+# Create Open3D visualization
 pcd = o3d.geometry.PointCloud()
-pcd.points = o3d.utility.Vector3dVector(points)
+pcd.points = o3d.utility.Vector3dVector(points_xyz)
 
 cam_lookat = np.array([0, 0, 0])
 cam_up = np.array([0, 0, 1])

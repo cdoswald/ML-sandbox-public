@@ -35,15 +35,17 @@ def show_camera_image_with_bboxes(
         camera_id: camera name string ID
     """
     # Camera image
-    obs_camera_image = utl.filter_table(camera_image_table, "index", obs_id)
-    obs_camera_image = utl.filter_table(obs_camera_image, "key.camera_name", camera_id)
+    obs_camera_image = utl.filter_rows_equal(
+        camera_image_table, {"index":obs_id, "key.camera_name":camera_id}
+    )
     assert(len(obs_camera_image) == 1)
     obs_camera_image_bytes = obs_camera_image["[CameraImageComponent].image"][0].as_py()
     obs_camera_image = Image.open(io.BytesIO(obs_camera_image_bytes))
     draw = ImageDraw.Draw(obs_camera_image)
     # Object bounding boxes
-    obs_camera_boxes = utl.filter_table(camera_box_table, "index", obs_id)
-    obs_camera_boxes = utl.filter_table(obs_camera_boxes, "key.camera_name", camera_id)
+    obs_camera_boxes = utl.filter_rows_equal(
+        camera_box_table, {"index":obs_id, "key.camera_name":camera_id}
+    )
     for i in range(len(obs_camera_boxes)):
         center_x = obs_camera_boxes["[CameraBoxComponent].box.center.x"][i].as_py()
         center_y = obs_camera_boxes["[CameraBoxComponent].box.center.y"][i].as_py()

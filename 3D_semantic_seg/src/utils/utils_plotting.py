@@ -56,7 +56,8 @@ def display_camera_images(
                     center_y + size_y/2,
                 ]
                 draw.rectangle(bbox_coords, outline="red", width=4)
-            obs_camera_image.show()
+        # Display image
+        obs_camera_image.show()
 
 
 def plot_range_image_tensor(

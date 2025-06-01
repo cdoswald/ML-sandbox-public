@@ -12,7 +12,7 @@ def convert_lidar_range_image_to_xyz_coords(
     lidar_segment_table: Optional[pyarrow.lib.Table] = None,
     lidar_return_count: int = 1,
     lidar_return_type: int = 0,
-    convert_to_world_ref: bool = True,
+    convert_to_world_ref: bool = False,
 ) -> np.ndarray:
     """Project 2D LiDAR range image values to 3D coordinates.
 
@@ -24,7 +24,7 @@ def convert_lidar_range_image_to_xyz_coords(
         lidar_return_count: index of LiDAR return number (options = {1, 2}; default = 1)
         lidar_return_type: index of LiDAR return type (default = 0 (distance))
         convert_to_world_ref: bool indicating whether to convert LiDAR coordinate
-            system to world reference system (default = True)
+            system to world reference system (default = False)
 
     Returns
         numpy ndarray of (LiDAR rows, LiDAR cols, (x, y, z))

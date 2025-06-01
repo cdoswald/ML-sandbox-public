@@ -33,6 +33,10 @@ def display_camera_images(
         camera_id: camera name string ID (default = 1 (front camera))
     """
     camera_image_table = utl.filter_rows_equal(camera_image_table, {"key.camera_name":camera_id})
+    if len(camera_image_table) < 1:
+        raise ValueError(
+            f"Camera image table does not contain any observations with camera_id={camera_id}"
+        )
     for i in range(len(camera_image_table)):
         obs_id = camera_image_table["index"][i].as_py()
         # Draw camera image

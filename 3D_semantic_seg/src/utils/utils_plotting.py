@@ -1,4 +1,4 @@
-"""Plotting utility functions for Waymo Open Dataset challenges."""
+"""Image plotting utility functions for Waymo Open Dataset challenges."""
 
 import io
 import os
@@ -20,45 +20,43 @@ from utils import utils_constants as utl_c
 from utils import utils_waymo as utl_w
 
 
-def show_camera_image_with_bboxes(
+def display_camera_images(
     camera_image_table: pyarrow.lib.Table,
-    camera_box_table: pyarrow.lib.Table,
-    obs_id: str,
-    camera_id: int,
+    camera_box_table: Optional[pyarrow.lib.Table] = None,
+    camera_id: int = 1,
 ) -> None:
-    """Display camera image with object bounding boxes.
+    """Display camera image(s) with optional object bounding boxes.
     
     Args
         camera_image_table: camera_image pyarrow table
-        camera_box_table: camera_box pyarrow table
-        obs_id: unique observation string ID
-        camera_id: camera name string ID
+        camera_box_table: camera_box pyarrow table (optional; default = None)
+        camera_id: camera name string ID (default = 1 (front camera))
     """
-    # Camera image
-    obs_camera_image = utl.filter_rows_equal(
-        camera_image_table, {"index":obs_id, "key.camera_name":camera_id}
-    )
-    assert(len(obs_camera_image) == 1)
-    obs_camera_image_bytes = obs_camera_image["[CameraImageComponent].image"][0].as_py()
-    obs_camera_image = Image.open(io.BytesIO(obs_camera_image_bytes))
-    draw = ImageDraw.Draw(obs_camera_image)
-    # Object bounding boxes
-    obs_camera_boxes = utl.filter_rows_equal(
-        camera_box_table, {"index":obs_id, "key.camera_name":camera_id}
-    )
-    for i in range(len(obs_camera_boxes)):
-        center_x = obs_camera_boxes["[CameraBoxComponent].box.center.x"][i].as_py()
-        center_y = obs_camera_boxes["[CameraBoxComponent].box.center.y"][i].as_py()
-        size_x = obs_camera_boxes["[CameraBoxComponent].box.size.x"][i].as_py()
-        size_y = obs_camera_boxes["[CameraBoxComponent].box.size.y"][i].as_py()
-        bbox_coords = [
-            center_x - size_x/2,
-            center_y - size_y/2,
-            center_x + size_x/2,
-            center_y + size_y/2,
-        ]
-        draw.rectangle(bbox_coords, outline="red", width=4)
-    obs_camera_image.show()
+    camera_image_table = utl.filter_rows_equal(camera_image_table, {"key.camera_name":camera_id})
+    for i in range(len(camera_image_table)):
+        obs_id = camera_image_table["index"][i].as_py()
+        # Draw camera image
+        obs_camera_image_bytes = camera_image_table["[CameraImageComponent].image"][i].as_py()
+        obs_camera_image = Image.open(io.BytesIO(obs_camera_image_bytes))
+        draw = ImageDraw.Draw(obs_camera_image)
+        # Draw object bounding boxes (if applicable)
+        if camera_box_table is not None:
+            obs_camera_boxes = utl.filter_rows_equal(
+                camera_box_table, {"index":obs_id, "key.camera_name":camera_id}
+            )
+            for j in range(len(obs_camera_boxes)):
+                center_x = obs_camera_boxes["[CameraBoxComponent].box.center.x"][j].as_py()
+                center_y = obs_camera_boxes["[CameraBoxComponent].box.center.y"][j].as_py()
+                size_x = obs_camera_boxes["[CameraBoxComponent].box.size.x"][j].as_py()
+                size_y = obs_camera_boxes["[CameraBoxComponent].box.size.y"][j].as_py()
+                bbox_coords = [
+                    center_x - size_x/2,
+                    center_y - size_y/2,
+                    center_x + size_x/2,
+                    center_y + size_y/2,
+                ]
+                draw.rectangle(bbox_coords, outline="red", width=4)
+            obs_camera_image.show()
 
 
 def plot_range_image_tensor(

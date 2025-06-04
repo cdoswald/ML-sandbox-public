@@ -1,4 +1,4 @@
-"""Camera utility functions for Waymo Open Dataset 3D semantic segmentation challenge."""
+"""Camera utility functions for Waymo Open Dataset challenges."""
 
 import io
 import os

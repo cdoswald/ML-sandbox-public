@@ -2,7 +2,7 @@
 
 import io
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import warnings
 
 import cv2
@@ -67,3 +67,37 @@ def extract_camera_images(
         # Append to frames list
         frames.append(obs_camera_image)
     return frames
+
+
+def display_frames(frames: Union[np.ndarray, List[np.ndarray]]) -> None:
+    """Display image frame(s) stored as numpy ndarray(s)."""
+    frames = [frames] if not isinstance(frames, list) else frames
+    for frame in frames:
+        plt.imshow(frame)
+        plt.axis("off")
+        plt.show()
+
+
+def write_frames_to_video_file(
+    frames: Union[np.ndarray, List[np.ndarray]],
+    dir_name: str,
+    file_name: str,
+    fps: float = 10.0,
+) -> None:
+    """Write image frame(s) stored as numpy ndarray(s) to mp4 video file."""
+    frames = [frames] if not isinstance(frames, list) else frames
+    height, width, _ = frames[0].shape
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    video_path = os.path.join(dir_name, f"{file_name}.mp4")
+    video = cv2.VideoWriter(video_path, fourcc, fps, (width, height))
+    try:
+        for idx, frame in enumerate(frames):
+            height_i, width_i, _ = frame.shape
+            if (height_i != height or width_i != width):
+                raise ValueError(
+                    f"Height and width of frame {idx} does not match frame 0"
+                )
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            video.write(frame)
+    finally:
+        video.release()

@@ -2,7 +2,7 @@
 
 import io
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import warnings
 
 import matplotlib.pyplot as plt
@@ -11,17 +11,6 @@ import tensorflow
 import tensorflow.compat.v1 as tf
 
 tf.enable_eager_execution()
-
-
-def display_frames(
-    frames: Union[np.ndarray, List[np.ndarray]]
-) -> None:
-    """Display image frame(s) stored as numpy ndarray(s)."""
-    frames = [frames] if not isinstance(frames, list) else frames
-    for frame in frames:
-        plt.imshow(frame)
-        plt.axis("off")
-        plt.show()
 
 
 def plot_range_image_tensor(

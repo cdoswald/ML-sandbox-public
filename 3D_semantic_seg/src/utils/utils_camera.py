@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import warnings
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import pyarrow
 

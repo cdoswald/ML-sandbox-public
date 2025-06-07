@@ -45,18 +45,18 @@ def load_parquet_data(
     file_id: str,
     data_subdir: Optional[str] = "",
     subset_cols: Optional[List[str]] = None,
-    filter_rows: Optional[Dict[str, Union[str, int, float]]] = None,
+    filter_rows: Optional[Dict[str, List[Union[str, int, float]]]] = None,
 ) -> pyarrow.Table:
     """Load parquet dataset.
 
-    Args
+    Args:
         data_dir: data directory name
         file_id: file name (excluding .parquet suffix)
         data_subdir: optional data subdirectory name
         subset_cols: optional list of column names to retain
-        filter_rows: optional dict of {col_name:filter_val} to filter rows
+        filter_rows: optional dict of {column_name_1:[filter_val_1, ...], ...}
 
-    Returns
+    Returns:
         pyarrow Table with filtered rows and columns (if applicable)
     """
     if not isinstance(data_subdir, str):
@@ -68,7 +68,10 @@ def load_parquet_data(
     # Filter rows and columns
     row_filter = None
     if filter_rows is not None:
-        filter_exprs = [(pds.field(col) == val) for col, val in filter_rows.items()]
+        filter_exprs = [
+            (pds.field(col_name.isin(list_filter_vals))) 
+            for col_name, list_filter_vals in filter_rows.items()
+        ]
         row_filter = reduce(operator.and_, filter_exprs)
     if subset_cols is None:
         subset_cols = data.schema.names
@@ -76,20 +79,20 @@ def load_parquet_data(
 
 def filter_rows_equal(
     table: pyarrow.lib.Table,
-    filter_dict: Dict[str, Union[str, int, float]],
+    filter_dict: Dict[str, List[Union[str, int, float]]],
 ) -> pyarrow.lib.Table:
     """Filter rows of pyarrow table using equality matching.
 
-    Args
+    Args:
         table: pyarrow table to filter
-        filter_dict: mapping of {col_name:filter_val}
+        filter_dict: dict of {column_name_1:[filter_val_1, ...], ...}
 
-    Returns
+    Returns:
         filtered pyarrow table
     """
     mask = pyarrow.array([True] * len(table))
-    for col_name, filter_val in filter_dict.items():
-        condition_match = pc.equal(table[col_name], filter_val)
+    for col_name, list_filter_vals in filter_dict.items():
+        condition_match = pc.is_in(table[col_name], list_filter_vals)
         mask = pc.and_kleene(mask, condition_match)
     return table.filter(mask)
 

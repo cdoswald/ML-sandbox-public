@@ -69,7 +69,7 @@ def load_parquet_data(
     row_filter = None
     if filter_rows is not None:
         filter_exprs = [
-            (pds.field(col_name.isin(list_filter_vals))) 
+            (pds.field(col_name).isin(list_filter_vals))
             for col_name, list_filter_vals in filter_rows.items()
         ]
         row_filter = reduce(operator.and_, filter_exprs)

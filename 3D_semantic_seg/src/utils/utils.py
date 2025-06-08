@@ -69,7 +69,7 @@ def load_parquet_data(
     row_filter = None
     if filter_rows is not None:
         filter_exprs = [
-            (pds.field(col_name).isin(list_filter_vals))
+            pds.field(col_name).isin(list_filter_vals)
             for col_name, list_filter_vals in filter_rows.items()
         ]
         row_filter = reduce(operator.and_, filter_exprs)
@@ -78,9 +78,9 @@ def load_parquet_data(
     return data.to_table(filter=row_filter, columns=subset_cols)
 
 def filter_rows_equal(
-    table: pyarrow.lib.Table,
+    table: pyarrow.Table,
     filter_dict: Dict[str, List[Union[str, int, float]]],
-) -> pyarrow.lib.Table:
+) -> pyarrow.Table:
     """Filter rows of pyarrow table using equality matching.
 
     Args:

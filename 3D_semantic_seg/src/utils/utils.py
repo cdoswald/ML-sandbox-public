@@ -46,6 +46,90 @@ def load_parquet_data(
     data_subdir: Optional[str] = "",
     subset_cols: Optional[List[str]] = None,
     filter_rows: Optional[Dict[str, List[Union[str, int, float]]]] = None,
+    scanner_batch_size: int = 128,
+) -> pyarrow.Table:
+    """Load parquet dataset.
+
+    Args:
+        data_dir: data directory name
+        file_id: file name (excluding .parquet suffix)
+        data_subdir: optional data subdirectory name
+        subset_cols: optional list of column names to retain
+        filter_rows: optional dict of {column_name_1:[filter_val_1, ...], ...}
+        scanner_batch_size: batch size to use for pyarrow.dataset scanner (default=128)
+
+    Returns:
+        pyarrow Table with filtered rows and columns (if applicable)
+    """
+    if not isinstance(data_subdir, str):
+        raise ValueError(
+            f"data_subdir must be empty or non-empty str, but got type {type(data_subdir)}"
+        )
+    file_path = os.path.join(data_dir, data_subdir, f"{file_id}.parquet")
+    data = pds.dataset(file_path, format="parquet")
+    # Filter rows
+    row_filter = None
+    if filter_rows is not None:
+        filter_exprs = []
+        for col_name, list_filter_vals in filter_rows.items():
+            if not isinstance(list_filter_vals, list):
+                raise ValueError(
+                    f"All values in filter_rows dict must be lists; got {type(list_filter_vals)}"
+                )
+            if col_name in data.schema.names:
+                if len(list_filter_vals) == 1:
+                    exprs = (pds.field(col_name) == list_filter_vals[0])
+                else:
+                    exprs = pds.field(col_name).isin(list_filter_vals)
+                filter_exprs.append(exprs)
+            else:
+                warnings.warn(
+                    f"Column '{col_name}' from filter_rows dict not found in schema "+
+                    f"(filepath = {file_path})"
+                )
+        # Take intersection of all filter expressions
+        if len(filter_exprs) > 1:
+            row_filter = reduce(operator.and_, filter_exprs)
+        elif filter_exprs:
+            row_filter = filter_exprs[0]
+        else:
+            warnings.warn(
+                f"User provided filter_rows arg, but no filter expressions could "+
+                "be generated. Check that column names in filter_rows match data schema."
+            )
+    # Filter columns
+    if subset_cols is None:
+        subset_cols = data.schema.names
+    else:
+        for col_name in subset_cols:
+            if col_name not in data.schema.names:
+                warnings.warn(
+                    f"Column '{col_name}' from subset_cols list not found in schema "+
+                    f"(filepath = {file_path})"
+                )
+        subset_cols = [col for col in subset_cols if col in data.schema.names]
+    # Scan data in batches to avoid OOM error
+    scanner = data.scanner(
+        filter=row_filter,
+        columns=subset_cols,
+        batch_size=scanner_batch_size,
+    )
+    matching_batches = []
+    for batch in scanner.to_batches():
+        if len(batch) > 0:
+            matching_batches.append(batch)
+    if matching_batches:
+        return pyarrow.Table.from_batches(matching_batches)
+    else:
+        return pyarrow.Table.from_batches([], schema=data.schema)
+
+
+def load_parquet_data2(
+    data_dir: str,
+    file_id: str,
+    data_subdir: Optional[str] = "",
+    subset_cols: Optional[List[str]] = None,
+    filter_rows: Optional[Dict[str, List[Union[str, int, float]]]] = None,
 ) -> pyarrow.Table:
     """Load parquet dataset.
 
@@ -65,27 +149,30 @@ def load_parquet_data(
         )
     file_path = os.path.join(data_dir, data_subdir, f"{file_id}.parquet")
     data = pds.dataset(file_path, format="parquet")
-    # Filter rows and columns
+    # Filter rows
     row_filter = None
     if filter_rows is not None:
         filter_exprs = []
-        for col_name, list_filter_vals in filter_rows.items():
-            if col_name in data.schema.names:
-                filter_exprs.append(pds.field(col_name).isin(list_filter_vals))
-            else:
-                warnings.warn(f"Column '{col_name}' from filter_rows dict not found in data schema")
-        if len(filter_exprs) > 1:
-            row_filter = reduce(operator.and_, filter_exprs)
-        else:
-            row_filter = filter_exprs[0]
+        for col_name, filter_vals in filter_rows.items():
+            exprs = (pds.field(col_name) == filter_vals)
+            filter_exprs.append(exprs)
+        # Take intersection of all filter expressions
+        row_filter = reduce(operator.and_, filter_exprs)
+    # Filter columns
     if subset_cols is None:
         subset_cols = data.schema.names
     else:
         for col_name in subset_cols:
             if col_name not in data.schema.names:
-                warnings.warn(f"Column '{col_name}' from subset_cols list not found in data schema")
-                subset_cols.pop(col_name)
+                warnings.warn(
+                    f"Column '{col_name}' from subset_cols list not found in schema "+
+                    f"(filepath = {file_path})"
+                )
+        subset_cols = [col for col in subset_cols if col in data.schema.names]
+    print("Loading table")
+    
     return data.to_table(filter=row_filter, columns=subset_cols)
+
 
 def filter_rows_equal(
     table: pyarrow.Table,

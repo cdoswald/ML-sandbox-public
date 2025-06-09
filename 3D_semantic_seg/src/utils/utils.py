@@ -68,13 +68,23 @@ def load_parquet_data(
     # Filter rows and columns
     row_filter = None
     if filter_rows is not None:
-        filter_exprs = [
-            pds.field(col_name).isin(list_filter_vals)
-            for col_name, list_filter_vals in filter_rows.items()
-        ]
-        row_filter = reduce(operator.and_, filter_exprs)
+        filter_exprs = []
+        for col_name, list_filter_vals in filter_rows.items():
+            if col_name in data.schema.names:
+                filter_exprs.append(pds.field(col_name).isin(list_filter_vals))
+            else:
+                warnings.warn(f"Column '{col_name}' from filter_rows dict not found in data schema")
+        if len(filter_exprs) > 1:
+            row_filter = reduce(operator.and_, filter_exprs)
+        else:
+            row_filter = filter_exprs[0]
     if subset_cols is None:
         subset_cols = data.schema.names
+    else:
+        for col_name in subset_cols:
+            if col_name not in data.schema.names:
+                warnings.warn(f"Column '{col_name}' from subset_cols list not found in data schema")
+                subset_cols.pop(col_name)
     return data.to_table(filter=row_filter, columns=subset_cols)
 
 def filter_rows_equal(

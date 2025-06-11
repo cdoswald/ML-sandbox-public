@@ -1,8 +1,9 @@
 """Camera utility functions for Waymo Open Dataset challenges."""
 
+from itertools import chain
 import io
 import os
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 import warnings
 
 import cv2
@@ -30,7 +31,7 @@ def extract_camera_images(
     Returns
         frames: list of image frames stored as numpy ndarrays
     """
-    camera_image_table = utl.filter_rows_equal(camera_image_table, {"key.camera_name":camera_id})
+    camera_image_table = utl.filter_rows_equal(camera_image_table, {"key.camera_name":[camera_id]})
     if len(camera_image_table) < 1:
         raise ValueError(
             f"Camera image table does not contain any observations with camera_id={camera_id}"
@@ -50,7 +51,7 @@ def extract_camera_images(
         # Draw object bounding boxes (if applicable)
         if camera_box_table is not None:
             obs_camera_boxes = utl.filter_rows_equal(
-                camera_box_table, {"index":obs_id, "key.camera_name":camera_id}
+                camera_box_table, {"index":obs_id, "key.camera_name":[camera_id]}
             )
             for j in range(len(obs_camera_boxes)):
                 center_x = obs_camera_boxes["[CameraBoxComponent].box.center.x"][j].as_py()
@@ -70,13 +71,48 @@ def extract_camera_images(
     return frames
 
 
-def display_frames(frames: Union[np.ndarray, List[np.ndarray]]) -> None:
-    """Display image frame(s) stored as numpy ndarray(s)."""
-    frames = [frames] if not isinstance(frames, list) else frames
+def display_single_camera(frames: Iterable[np.ndarray]) -> None:
+    """Display image frame(s) for single camera.
+
+    Args:
+        frames: Iterable containing image(s) stored as numpy.ndarray(s)
+
+    Returns:
+        None
+    """
     for frame in frames:
         plt.imshow(frame)
         plt.axis("off")
         plt.show()
+
+
+def display_multicamera(frames_dict: Dict[int, Iterable[np.ndarray]]) -> None:
+    """Display image frame(s) for multiple camera IDs.
+
+    Args:
+        frames_dict: dict mapping camera ID to frame(s)
+
+    Returns:
+        None
+    """
+    #TODO: reorder camera IDs to match vehicle view
+    camera_ids = list(frames_dict.keys())
+    if len(camera_ids) < 2:
+        raise NotImplementedError(
+            f"Function 'display_multicamera' does not handle fewer "+
+            "than two cameras; use 'display_single_camera' function instead."
+        )
+    n_cameras = len(camera_ids)
+    n_frames = max([len(x) for x in frames_dict.values()])
+    for frame_i in range(n_frames):
+        fig, axes = plt.subplots(1, n_cameras, figsize=(8,6))
+        fig.subplots_adjust(wspace=0, hspace=0)
+        for j, camera_id in enumerate(sorted(camera_ids)):
+            try:
+                frame = frames_dict[camera_id][frame_i]
+                axes[j].imshow(frame)
+            finally:
+                axes[j].axis("off")
 
 
 def write_frames_to_video_file(

@@ -123,57 +123,6 @@ def load_parquet_data(
     else:
         return pyarrow.Table.from_batches([], schema=data.schema)
 
-
-def load_parquet_data2(
-    data_dir: str,
-    file_id: str,
-    data_subdir: Optional[str] = "",
-    subset_cols: Optional[List[str]] = None,
-    filter_rows: Optional[Dict[str, List[Union[str, int, float]]]] = None,
-) -> pyarrow.Table:
-    """Load parquet dataset.
-
-    Args:
-        data_dir: data directory name
-        file_id: file name (excluding .parquet suffix)
-        data_subdir: optional data subdirectory name
-        subset_cols: optional list of column names to retain
-        filter_rows: optional dict of {column_name_1:[filter_val_1, ...], ...}
-
-    Returns:
-        pyarrow Table with filtered rows and columns (if applicable)
-    """
-    if not isinstance(data_subdir, str):
-        raise ValueError(
-            f"data_subdir must be empty or non-empty str, but got type {type(data_subdir)}"
-        )
-    file_path = os.path.join(data_dir, data_subdir, f"{file_id}.parquet")
-    data = pds.dataset(file_path, format="parquet")
-    # Filter rows
-    row_filter = None
-    if filter_rows is not None:
-        filter_exprs = []
-        for col_name, filter_vals in filter_rows.items():
-            exprs = (pds.field(col_name) == filter_vals)
-            filter_exprs.append(exprs)
-        # Take intersection of all filter expressions
-        row_filter = reduce(operator.and_, filter_exprs)
-    # Filter columns
-    if subset_cols is None:
-        subset_cols = data.schema.names
-    else:
-        for col_name in subset_cols:
-            if col_name not in data.schema.names:
-                warnings.warn(
-                    f"Column '{col_name}' from subset_cols list not found in schema "+
-                    f"(filepath = {file_path})"
-                )
-        subset_cols = [col for col in subset_cols if col in data.schema.names]
-    print("Loading table")
-    
-    return data.to_table(filter=row_filter, columns=subset_cols)
-
-
 def filter_rows_equal(
     table: pyarrow.Table,
     filter_dict: Dict[str, List[Union[str, int, float]]],
@@ -189,7 +138,9 @@ def filter_rows_equal(
     """
     mask = pyarrow.array([True] * len(table))
     for col_name, list_filter_vals in filter_dict.items():
-        condition_match = pc.is_in(table[col_name], list_filter_vals)
+        condition_match = pc.is_in(
+            table[col_name], pyarrow.array(list_filter_vals)
+        )
         mask = pc.and_kleene(mask, condition_match)
     return table.filter(mask)
 

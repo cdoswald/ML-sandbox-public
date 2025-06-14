@@ -3,7 +3,7 @@
 from itertools import chain
 import io
 import os
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 import warnings
 
 import cv2
@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyarrow
 
-from utils import utils as utl
+from utils import utils as util
+from utils import utils_constants as util_cons
 
 
 def extract_camera_images(
@@ -31,7 +32,7 @@ def extract_camera_images(
     Returns
         frames: list of image frames stored as numpy ndarrays
     """
-    camera_image_table = utl.filter_rows_equal(camera_image_table, {"key.camera_name":[camera_id]})
+    camera_image_table = util.filter_rows_equal(camera_image_table, {"key.camera_name":[camera_id]})
     if len(camera_image_table) < 1:
         raise ValueError(
             f"Camera image table does not contain any observations with camera_id={camera_id}"
@@ -50,7 +51,7 @@ def extract_camera_images(
         obs_camera_image = cv2.cvtColor(obs_camera_image, cv2.COLOR_BGR2RGB)
         # Draw object bounding boxes (if applicable)
         if camera_box_table is not None:
-            obs_camera_boxes = utl.filter_rows_equal(
+            obs_camera_boxes = util.filter_rows_equal(
                 camera_box_table, {"index":obs_id, "key.camera_name":[camera_id]}
             )
             for j in range(len(obs_camera_boxes)):
@@ -71,11 +72,11 @@ def extract_camera_images(
     return frames
 
 
-def display_single_camera(frames: Iterable[np.ndarray]) -> None:
+def display_single_camera(frames: Sequence[np.ndarray]) -> None:
     """Display image frame(s) for single camera.
 
     Args:
-        frames: Iterable containing image(s) stored as numpy.ndarray(s)
+        frames: Sequence containing image(s) stored as numpy ndarray(s)
 
     Returns:
         None
@@ -86,28 +87,47 @@ def display_single_camera(frames: Iterable[np.ndarray]) -> None:
         plt.show()
 
 
-def display_multicamera(frames_dict: Dict[int, Iterable[np.ndarray]]) -> None:
+def display_multicamera(
+    frames_dict: Dict[int, Sequence[np.ndarray]],
+    orient_veh_view: bool = True,
+) -> None:
     """Display image frame(s) for multiple camera IDs.
 
     Args:
-        frames_dict: dict mapping camera ID to frame(s)
+        frames_dict: dict mapping camera ID to Sequence of frame(s)
+            stored as numpy ndarray(s)
+        orient_veh_view: indicates whether to order camera IDs to reflect 
+            vehicle view (e.g., front camera displayed in center image)
 
     Returns:
         None
     """
-    #TODO: reorder camera IDs to match vehicle view
     camera_ids = list(frames_dict.keys())
     if len(camera_ids) < 2:
         raise NotImplementedError(
             f"Function 'display_multicamera' does not handle fewer "+
             "than two cameras; use 'display_single_camera' function instead."
         )
+    # Reorder camera IDs to match vehicle view (if applicable)
+    if orient_veh_view:
+        ordered_camera_ids = []
+        camera_name_idx_map = {v:k for k,v in util_cons.get_camera_idx_map().items()}
+        camera_name_order = [
+            "REAR_LEFT", "SIDE_LEFT", "FRONT_LEFT", "FRONT", "FRONT_RIGHT",
+            "SIDE_RIGHT", "REAR_RIGHT", "REAR"
+        ]
+        for camera_name in camera_name_order:
+            camera_idx = camera_name_idx_map.get(camera_name)
+            if camera_idx is not None and camera_idx in camera_ids:
+                ordered_camera_ids.append(camera_idx)
+        camera_ids = ordered_camera_ids
+    # Display frames
     n_cameras = len(camera_ids)
     n_frames = max([len(x) for x in frames_dict.values()])
     for frame_i in range(n_frames):
         fig, axes = plt.subplots(1, n_cameras, figsize=(8,6))
         fig.subplots_adjust(wspace=0, hspace=0)
-        for j, camera_id in enumerate(sorted(camera_ids)):
+        for j, camera_id in enumerate(camera_ids):
             try:
                 frame = frames_dict[camera_id][frame_i]
                 axes[j].imshow(frame)

@@ -9,19 +9,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker container
+      run: docker-compose -f 3D_semantic_seg/docker-compose.yml up --build -d
+
+    - name: Run pylint inside Docker container
       run: |
-        python -m pip install --upgrade pip
-        pip install pylint
-    - name: Analysing the code with pylint
-      run: |
-        pylint $(git ls-files '3D_semantic_seg/*.py')
+        docker-compose -f 3D_semantic_seg/docker-compose.yml exec -T waymo-od-env \
+          conda run -n waymo_open_env \
+          bash -c "\
+            pip install pylint && \
+            cd /workspace/hostfiles &&
+            pylint \$(git ls-files 'src/*.py')"
+
+    - name: Tear down Docker container
+      run: docker-compose -f 3D_semantic_seg/docker-compose.yml down

@@ -24,7 +24,6 @@ dependencies:
   - numexpr=2.8.7
   - numpy=1.26.4
   - numpy-base=1.26.4
-  - opencv-python=4.11.0.86
   - openpyxl=3.1.2
   - openssl=3.0.13
   - pandas=2.2.1
@@ -48,3 +47,5 @@ dependencies:
   - wheel=0.43.0
   - xz=5.4.6
   - zlib=1.2.13
+  - pip:
+    - opencv-python==4.11.0.86

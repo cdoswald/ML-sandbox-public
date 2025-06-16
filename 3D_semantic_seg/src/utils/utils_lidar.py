@@ -1,4 +1,4 @@
-"""LiDAR utility functions for Waymo Open Dataset challenges."""
+"""LiDAR utility functions"""
 
 from typing import Optional
 

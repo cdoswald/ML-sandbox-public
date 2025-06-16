@@ -1,4 +1,4 @@
-"""Plotting utility functions for Waymo Open Dataset challenges."""
+"""Plotting utility functions"""
 
 import io
 import os

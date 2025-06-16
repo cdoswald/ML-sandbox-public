@@ -1,4 +1,4 @@
-"""Constant utility functions for Waymo Open Dataset challenges."""
+"""Constant utility functions"""
 
 import os
 from typing import Dict, List, Optional, Tuple

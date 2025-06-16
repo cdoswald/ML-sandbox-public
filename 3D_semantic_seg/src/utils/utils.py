@@ -1,4 +1,4 @@
-"""General utility functions for Waymo Open Dataset challenges."""
+"""General utility functions"""
 
 from functools import reduce
 import operator

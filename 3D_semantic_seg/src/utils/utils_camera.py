@@ -1,4 +1,4 @@
-"""Camera utility functions for Waymo Open Dataset challenges."""
+"""Camera utility functions"""
 
 from itertools import chain
 import io
@@ -142,7 +142,8 @@ def orient_camera_ids(camera_ids: List[int]) -> List[int]:
             ordered_camera_ids.append(camera_idx)
     return ordered_camera_ids
 
-
+## TODO: left off here 6/15/25; need to rewrite function to handle
+# single and multicamera display
 def write_frames_to_video_file(
     frames: Union[List[np.ndarray], Dict[int, List[np.ndarray]]],
     dir_name: str,

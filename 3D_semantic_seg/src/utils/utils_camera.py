@@ -72,61 +72,60 @@ def extract_camera_images(
     return frames
 
 
-def display_single_camera(frames: Sequence[np.ndarray]) -> None:
-    """Display image frame(s) for single camera.
-
-    Args:
-        frames: Sequence containing image(s) stored as numpy ndarray(s)
-
-    Returns:
-        None
-    """
-    for frame in frames:
-        plt.imshow(frame)
-        plt.axis("off")
-        plt.show()
-
-
-def display_multicamera(
-    frames_dict: Dict[int, Sequence[np.ndarray]],
+def display_frames(
+    frames: Union[Sequence[np.ndarray], Dict[int, Sequence[np.ndarray]]],
     orient_veh_view: bool = True,
 ) -> None:
-    """Display image frame(s) for multiple camera IDs.
+    """Display camera image frame(s). For single-camera display, 'frames'
+    should be a sequence of numpy ndarrays. For multicamera display,
+    'frames' should be a dictionary mapping camera ID to sequence of 
+    numpy ndarrays.
+
+    If multicamera display, then images will be automatically reordered
+    to match the viewpoint of the vehicle (e.g., left side camera will be
+    the furthest left image, front camera will be the middle image, etc.).
+    To display the images according to the original order of camera IDs 
+    in the 'frames' dictionary, set 'orient_veh_view' arg to False.
 
     Args:
-        frames_dict: dict mapping camera ID to Sequence of frame(s)
-            stored as numpy ndarray(s)
-        orient_veh_view: indicates whether to order camera IDs to reflect 
-            vehicle view (e.g., front camera displayed in center image)
+        frames: for single camera, sequence of images stored as numpy 
+            ndarray(s); for multicamera, dict mapping camera ID to sequence
+            of images stored as numpy ndarray(s)
+        orient_veh_view: bool indicator for whether to automatically display
+            images from vehicle perspective (default = True); only applies
+            if frames is dict for multicamera display
 
     Returns:
         None
     """
-    camera_ids = list(frames_dict.keys())
-    if len(camera_ids) < 2:
-        raise NotImplementedError(
-            f"Function 'display_multicamera' does not handle fewer "+
-            "than two cameras; use 'display_single_camera' function instead."
-        )
-    # Reorder camera IDs to match vehicle view (if applicable)
-    if orient_veh_view:
-        camera_ids = orient_camera_ids(camera_ids)
-    # Display frames
-    n_cameras = len(camera_ids)
-    n_frames = max([len(x) for x in frames_dict.values()])
-    for frame_i in range(n_frames):
-        fig, axes = plt.subplots(1, n_cameras, figsize=(8,6))
-        fig.subplots_adjust(wspace=0, hspace=0)
-        for j, camera_id in enumerate(camera_ids):
-            try:
-                frame = frames_dict[camera_id][frame_i]
-                axes[j].imshow(frame)
-            finally:
-                axes[j].axis("off")
+    # Multicamera display
+    if isinstance(frames, dict):
+        camera_ids = list(frames.keys())
+        if orient_veh_view:
+            camera_ids = orient_camera_ids(camera_ids)
+        n_cameras = len(camera_ids)
+        n_frames = max([len(x) for x in frames.values()])
+        for i in range(n_frames):
+            fig, axes = plt.subplots(1, n_cameras, figsize=(8,6))
+            fig.subplots_adjust(wspace=0.03, hspace=0)
+            for j, camera_id in enumerate(camera_ids):
+                try:
+                    frame = frames[camera_id][i]
+                    axes[j].imshow(frame)
+                finally:
+                    axes[j].axis("off")
+            plt.show()
+            plt.close()
+    # Single-camera display
+    else:
+        for frame in frames:
+            plt.imshow(frame)
+            plt.axis("off")
+            plt.show()
 
 
 def orient_camera_ids(camera_ids: List[int]) -> List[int]:
-    """Reorder list of camera IDs to match vehicle viewpoint.
+    """Reorder list of camera IDs to reflect vehicle viewpoint.
 
     Args:
         camera_ids: list of camera IDs containing at least one camera frame
@@ -145,7 +144,7 @@ def orient_camera_ids(camera_ids: List[int]) -> List[int]:
 
 
 def write_frames_to_video_file(
-    frames: Union[np.ndarray, List[np.ndarray]],
+    frames: Union[List[np.ndarray], Dict[int, List[np.ndarray]]],
     dir_name: str,
     file_name: str,
     fps: float = 10.0,

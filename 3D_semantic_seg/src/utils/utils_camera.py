@@ -110,17 +110,7 @@ def display_multicamera(
         )
     # Reorder camera IDs to match vehicle view (if applicable)
     if orient_veh_view:
-        ordered_camera_ids = []
-        camera_name_idx_map = {v:k for k,v in util_cons.get_camera_idx_map().items()}
-        camera_name_order = [
-            "REAR_LEFT", "SIDE_LEFT", "FRONT_LEFT", "FRONT", "FRONT_RIGHT",
-            "SIDE_RIGHT", "REAR_RIGHT", "REAR"
-        ]
-        for camera_name in camera_name_order:
-            camera_idx = camera_name_idx_map.get(camera_name)
-            if camera_idx is not None and camera_idx in camera_ids:
-                ordered_camera_ids.append(camera_idx)
-        camera_ids = ordered_camera_ids
+        camera_ids = orient_camera_ids(camera_ids)
     # Display frames
     n_cameras = len(camera_ids)
     n_frames = max([len(x) for x in frames_dict.values()])
@@ -133,6 +123,25 @@ def display_multicamera(
                 axes[j].imshow(frame)
             finally:
                 axes[j].axis("off")
+
+
+def orient_camera_ids(camera_ids: List[int]) -> List[int]:
+    """Reorder list of camera IDs to match vehicle viewpoint.
+
+    Args:
+        camera_ids: list of camera IDs containing at least one camera frame
+
+    Returns:
+        ordered_camera_ids: reordered list of camera IDs
+    """
+    ordered_camera_ids = []
+    camera_name_idx_map = {v:k for k,v in util_cons.get_camera_idx_map().items()}
+    camera_name_order = util_cons.get_veh_view_camera_name_order()
+    for camera_name in camera_name_order:
+        camera_idx = camera_name_idx_map.get(camera_name)
+        if camera_idx is not None and camera_idx in camera_ids:
+            ordered_camera_ids.append(camera_idx)
+    return ordered_camera_ids
 
 
 def write_frames_to_video_file(

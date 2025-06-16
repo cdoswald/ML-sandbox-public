@@ -44,6 +44,19 @@ def get_camera_idx_map() -> Dict[int, str]:
         8: "REAR_RIGHT"
     }
 
+def get_veh_view_camera_name_order() -> List[str]:
+    """Get list of camera names ordered to reflect vehicle viewpoint."""
+    return [
+        "REAR_LEFT",
+        "SIDE_LEFT",
+        "FRONT_LEFT",
+        "FRONT",
+        "FRONT_RIGHT",
+        "SIDE_RIGHT",
+        "REAR_RIGHT",
+        "REAR",
+    ]
+
 def get_range_image_last_dim_map() -> Dict[int, str]:
     """Get dictionary mapping last dim of range image to signal type
     (e.g., distance, intensity, elongation)."""

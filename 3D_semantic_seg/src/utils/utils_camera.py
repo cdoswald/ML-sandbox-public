@@ -148,6 +148,7 @@ def write_frames_to_video_file(
     frames: Union[List[np.ndarray], Dict[int, List[np.ndarray]]],
     dir_name: str,
     file_name: str,
+    output_resolution: Tuple[int, int] = (1920, 1080),
     fps: float = 10.0,
     orient_veh_view: bool = True,
 ) -> None:
@@ -168,6 +169,7 @@ def write_frames_to_video_file(
             of images stored as numpy ndarray(s)
         dir_name: string directory name for mp4 video file
         file_name: string file name for mp4 video file (excluding .mp4 suffix)
+        output_resolution: video resolution formatted as (output_width, output_height)
         fps: frames per second for mp4 video file
         orient_veh_view: bool indicator to display images from vehicle 
             perspective (default = True); only applies if frames is dict for 
@@ -176,6 +178,7 @@ def write_frames_to_video_file(
     Returns:
         None (saves mp4 video to "{dir_name}/{file_name}.mp4")
     """
+    os.makedirs(dir_name, exist_ok=True)
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     video_path = os.path.join(dir_name, f"{file_name}.mp4")
     out_frames = []
@@ -193,6 +196,21 @@ def write_frames_to_video_file(
                 except KeyError:
                     pass
             if concat_frames_list:
+                # Pad smaller images with whitespace for horizontal concatenation
+                concat_max_height = max(frame.shape[0] for frame in concat_frames_list)
+                for j in range(len(concat_frames_list)):
+                    concat_height = concat_frames_list[j].shape[0]
+                    if concat_height < concat_max_height:
+                        pad_top = (concat_max_height - concat_height) // 2
+                        pad_bottom = concat_max_height - concat_height - pad_top
+                        padding = (pad_top, pad_bottom, 0, 0)
+                        concat_frames_list[j] = cv2.copyMakeBorder(
+                            concat_frames_list[j],
+                            *padding,
+                            borderType=cv2.BORDER_CONSTANT,
+                            value=(255, 255, 255),
+                        )
+                # Concatenate frames horizontally
                 concat_frames = cv2.hconcat(concat_frames_list)
                 out_frames.append(concat_frames)
     # Single-camera display
@@ -200,17 +218,55 @@ def write_frames_to_video_file(
         out_frames = frames
     # Write video
     if out_frames:
-        height, width, _ = out_frames[0].shape
-        video = cv2.VideoWriter(video_path, fourcc, fps, (width, height))
+        video = cv2.VideoWriter(video_path, fourcc, fps, output_resolution)
         try:
-            for idx, frame in enumerate(out_frames):
-                height_i, width_i, _ = frame.shape
-                if (height_i != height or width_i != width):
-                    raise ValueError(
-                        f"Height and width of output frame {idx} "+
-                        "does not match output frame 0"
-                    )
+            for frame in out_frames:
+                frame = resize_image_with_fixed_aspect_ratio(frame, *output_resolution)
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 video.write(frame)
         finally:
             video.release()
+
+
+def resize_image_with_fixed_aspect_ratio(
+    image: np.ndarray,
+    target_width: int = 1920,
+    target_height: int = 1080,
+    pad_color: Tuple[int, int, int] = (0, 0, 0),
+) -> np.ndarray:
+    """Resize image to target_width x target_height, preserving original
+    image aspect ratio.
+
+    Args:
+        image: image stored as numpy ndarray
+        target_width: target width resolution in pixels (default = 1920)
+        target_height: target height resolution in pixels (default = 1080)
+        pad_color: padding color in RGB format
+
+    Returns:
+        resized_image with original aspect ratio
+    """
+    orig_height, orig_width = image.shape[:2]
+    orig_aspect_ratio = orig_width / orig_height
+    target_aspect_ratio = target_width / target_height
+    if orig_aspect_ratio > target_aspect_ratio:
+        # Wider than target, scale height by width
+        new_w = target_width
+        new_h = int(target_width / orig_aspect_ratio)
+    else:
+        # Taller than target, scale width by height
+        new_w = int(target_height * orig_aspect_ratio)
+        new_h = target_height
+    resized_image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    # Pad image
+    pad_top = (target_height - new_h) // 2
+    pad_bottom = target_height - new_h - pad_top
+    pad_left = (target_width - new_w) // 2
+    pad_right = target_width - new_w - pad_left
+    padding = (pad_top, pad_bottom, pad_left, pad_right)
+    return cv2.copyMakeBorder(
+        resized_image,
+        *padding,
+        borderType=cv2.BORDER_CONSTANT,
+        value=pad_color
+    )

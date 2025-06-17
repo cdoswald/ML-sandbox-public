@@ -72,6 +72,26 @@ def extract_camera_images(
     return frames
 
 
+def orient_camera_ids(camera_ids: List[int]) -> List[int]:
+    """Reorder list of camera IDs to reflect vehicle viewpoint.
+
+    Args:
+        camera_ids: list of camera IDs
+
+    Returns:
+        ordered_camera_ids: list of camera IDs reordered to reflect
+            vehicle viewpoint
+    """
+    ordered_camera_ids = []
+    camera_name_idx_map = {v:k for k,v in util_cons.get_camera_idx_map().items()}
+    camera_name_order = util_cons.get_veh_view_camera_name_order()
+    for camera_name in camera_name_order:
+        camera_idx = camera_name_idx_map.get(camera_name)
+        if camera_idx is not None and camera_idx in camera_ids:
+            ordered_camera_ids.append(camera_idx)
+    return ordered_camera_ids
+
+
 def display_frames(
     frames: Union[Sequence[np.ndarray], Dict[int, Sequence[np.ndarray]]],
     orient_veh_view: bool = True,
@@ -81,7 +101,7 @@ def display_frames(
     'frames' should be a dictionary mapping camera ID to sequence of 
     numpy ndarrays.
 
-    If multicamera display, then images will be automatically reordered
+    If multicamera display, then images will be reordered by default
     to match the viewpoint of the vehicle (e.g., left side camera will be
     the furthest left image, front camera will be the middle image, etc.).
     To display the images according to the original order of camera IDs 
@@ -91,9 +111,9 @@ def display_frames(
         frames: for single camera, sequence of images stored as numpy 
             ndarray(s); for multicamera, dict mapping camera ID to sequence
             of images stored as numpy ndarray(s)
-        orient_veh_view: bool indicator for whether to automatically display
-            images from vehicle perspective (default = True); only applies
-            if frames is dict for multicamera display
+        orient_veh_view: bool indicator to display images from vehicle 
+            perspective (default = True); only applies if frames is dict for 
+            multicamera display
 
     Returns:
         None
@@ -124,46 +144,73 @@ def display_frames(
             plt.show()
 
 
-def orient_camera_ids(camera_ids: List[int]) -> List[int]:
-    """Reorder list of camera IDs to reflect vehicle viewpoint.
-
-    Args:
-        camera_ids: list of camera IDs containing at least one camera frame
-
-    Returns:
-        ordered_camera_ids: reordered list of camera IDs
-    """
-    ordered_camera_ids = []
-    camera_name_idx_map = {v:k for k,v in util_cons.get_camera_idx_map().items()}
-    camera_name_order = util_cons.get_veh_view_camera_name_order()
-    for camera_name in camera_name_order:
-        camera_idx = camera_name_idx_map.get(camera_name)
-        if camera_idx is not None and camera_idx in camera_ids:
-            ordered_camera_ids.append(camera_idx)
-    return ordered_camera_ids
-
-## TODO: left off here 6/15/25; need to rewrite function to handle
-# single and multicamera display
 def write_frames_to_video_file(
     frames: Union[List[np.ndarray], Dict[int, List[np.ndarray]]],
     dir_name: str,
     file_name: str,
     fps: float = 10.0,
+    orient_veh_view: bool = True,
 ) -> None:
-    """Write image frame(s) stored as numpy ndarray(s) to mp4 video file."""
-    frames = [frames] if not isinstance(frames, list) else frames
-    height, width, _ = frames[0].shape
+    """Write camera image frame(s) to mp4 video. For single-camera display, 
+    'frames' should be a sequence of numpy ndarrays. For multicamera display,
+    'frames' should be a dictionary mapping camera ID to sequence of 
+    numpy ndarrays.
+
+    If multicamera display, then images will be reordered by default
+    to match the viewpoint of the vehicle (e.g., left side camera will be
+    the furthest left image, front camera will be the middle image, etc.).
+    To display the images according to the original order of camera IDs 
+    in the 'frames' dictionary, set 'orient_veh_view' arg to False.
+    
+    Args:
+        frames: for single camera, sequence of images stored as numpy 
+            ndarray(s); for multicamera, dict mapping camera ID to sequence
+            of images stored as numpy ndarray(s)
+        dir_name: string directory name for mp4 video file
+        file_name: string file name for mp4 video file (excluding .mp4 suffix)
+        fps: frames per second for mp4 video file
+        orient_veh_view: bool indicator to display images from vehicle 
+            perspective (default = True); only applies if frames is dict for 
+            multicamera display
+
+    Returns:
+        None (saves mp4 video to "{dir_name}/{file_name}.mp4")
+    """
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     video_path = os.path.join(dir_name, f"{file_name}.mp4")
-    video = cv2.VideoWriter(video_path, fourcc, fps, (width, height))
-    try:
-        for idx, frame in enumerate(frames):
-            height_i, width_i, _ = frame.shape
-            if (height_i != height or width_i != width):
-                raise ValueError(
-                    f"Height and width of frame {idx} does not match frame 0"
-                )
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            video.write(frame)
-    finally:
-        video.release()
+    out_frames = []
+    # Multicamera display
+    if isinstance(frames, dict):
+        camera_ids = list(frames.keys())
+        if orient_veh_view:
+            camera_ids = orient_camera_ids(camera_ids)
+        n_frames = max([len(x) for x in frames.values()])
+        for i in range(n_frames):
+            concat_frames_list = []
+            for camera_id in camera_ids:
+                try:
+                    concat_frames_list.append(frames[camera_id][i])
+                except KeyError:
+                    pass
+            if concat_frames_list:
+                concat_frames = cv2.hconcat(concat_frames_list)
+                out_frames.append(concat_frames)
+    # Single-camera display
+    else:
+        out_frames = frames
+    # Write video
+    if out_frames:
+        height, width, _ = out_frames[0].shape
+        video = cv2.VideoWriter(video_path, fourcc, fps, (width, height))
+        try:
+            for idx, frame in enumerate(out_frames):
+                height_i, width_i, _ = frame.shape
+                if (height_i != height or width_i != width):
+                    raise ValueError(
+                        f"Height and width of output frame {idx} "+
+                        "does not match output frame 0"
+                    )
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                video.write(frame)
+        finally:
+            video.release()

@@ -21,18 +21,6 @@ vis = o3d.visualization.Visualizer()
 vis.create_window()
 vis.add_geometry(o3d.geometry.TriangleMesh.create_coordinate_frame())
 
-# Adjust default camera position
-cam_lookat = np.array([0, 0, 0])
-cam_up = np.array([0, 0, 1])
-cam_front = np.array([-1, 0, 1])
-cam_front = cam_front / np.linalg.norm(cam_front)
-
-ctr = vis.get_view_control()
-ctr.set_lookat(cam_lookat)
-ctr.set_front(cam_front)
-ctr.set_up(cam_up)
-ctr.set_zoom(CAM_ZOOM)
-
 # Create geometry object
 pcd = o3d.geometry.PointCloud()
 
@@ -66,6 +54,18 @@ for pointcloud_file in pointcloud_files:
         else:
             vis.update_geometry(pcd)
 
+        # Adjust default camera position
+        cam_lookat = np.array([0, 0, 0])
+        cam_up = np.array([0, 0, 1])
+        cam_front = np.array([-1, 0, 1])
+        cam_front = cam_front / np.linalg.norm(cam_front)
+
+        ctr = vis.get_view_control()
+        ctr.set_lookat(cam_lookat)
+        ctr.set_front(cam_front)
+        ctr.set_up(cam_up)
+        ctr.set_zoom(CAM_ZOOM)
+
         vis.poll_events()
         vis.update_renderer()
         time.sleep(FRAME_DELAY_SEC)
@@ -73,5 +73,4 @@ for pointcloud_file in pointcloud_files:
 # Clean up
 vis.destroy_window()
 
-#TODO: left off here 6/23 @ 11pm; need to adjust camera view for LiDAR stream
-#TODO: record frames and output as video using OpenCV
+#TODO: left off here 6/23 @ 11pm; output as video using OpenCV

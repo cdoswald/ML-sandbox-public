@@ -63,6 +63,10 @@ for pointcloud_file in pointcloud_files:
         if first_pass:
             vis.add_geometry(pcd)
             first_pass = False
+            # Add render warm-up
+            vis.poll_events()
+            vis.update_renderer()
+            time.sleep(0.1)
         else:
             vis.update_geometry(pcd)
 
@@ -95,6 +99,3 @@ for pointcloud_file in pointcloud_files:
     # Clean up
     video_writer.release()
     vis.destroy_window()
-
-# TODO: left off here on 6/29 @ 11:10pm; second pointcloud video was blank; check 
-# underlying pointcloud data

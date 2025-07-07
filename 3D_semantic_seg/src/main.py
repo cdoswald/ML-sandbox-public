@@ -133,14 +133,15 @@ if __name__ == "__main__":
         # util_cam.display_frames(camera_frames) # Multicamera
         # util_cam.display_frames(camera_frames[1]) # Single camera
         
-        # util_cam.write_frames_to_video_file(
-        #     camera_frames,
-        #     VIDEOS_DIR,
-        #     "test_2",
-        # )
-        
+        util_cam.write_frames_to_video_file(
+            camera_frames,
+            VIDEOS_DIR,
+            f"camera_{file_id}",
+            fps=5.0,
+        )
+
         #TODO: left off here; need to create a sequence of LiDAR 3D point clouds
-            
+
         # Get lidar range values for one observation at a time due to memory constraints
         all_points_dict = {}
         for labeled_obs_id in sorted(labeled_obs_ids):
@@ -156,6 +157,15 @@ if __name__ == "__main__":
         np.savez(
             os.path.join(POINTCLOUD_DIR, f"pointcloud_{file_id}.npz"),
             **{k:v for k,v in all_points_dict.items()}
+        )
+
+        from utils_open3d import visualize_pointcloud
+
+        visualize_pointcloud(
+            pointcloud_file=f"pointcloud_{file_id}.npz",
+            pointcloud_dir=POINTCLOUD_DIR,
+            save_video=True,
+            videos_dir=VIDEOS_DIR
         )
 
         break

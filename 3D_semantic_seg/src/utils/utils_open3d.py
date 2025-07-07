@@ -17,7 +17,7 @@ def visualize_pointcloud(
     output_resolution: Tuple[int, int] = (1280, 720)
     fps: float = 10.0,
     camera_zoom: Optional[float] = 0.2,
-    save_video: bool = True,
+    save_video: bool = False,
     videos_dir: Optional[str] = None,
 ) -> None:
     """ """ #TODO: add docstring

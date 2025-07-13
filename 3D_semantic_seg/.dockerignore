@@ -1,2 +1,11 @@
+# Archived files
+_archive/
+
 # Data files
 data/
+pointclouds/
+videos/
+
+# Dev files
+.git
+.devcontainer

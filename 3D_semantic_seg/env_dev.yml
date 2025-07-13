@@ -1,4 +1,4 @@
-name: waymo_open_env
+name: base
 channels:
   - defaults
   - conda-forge

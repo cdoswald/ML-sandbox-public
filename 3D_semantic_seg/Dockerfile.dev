@@ -16,10 +16,10 @@ USER $MAMBA_USER
 ENV MAMBA_DOCKERFILE_ACTIVATE=1
 
 # Copy and install environment
-COPY --chown=$MAMBA_USER:$MAMBA_USER environment.yml /workspace/environment.yml
-RUN micromamba create -y -n waymo_open_env -f /workspace/environment.yml && \
+COPY --chown=$MAMBA_USER:$MAMBA_USER env_dev.yml /workspace/env_dev.yml
+RUN micromamba install -y -n base -f /workspace/env_dev.yml && \
 	micromamba clean --all --yes
 
 # Clone Waymo repo
 RUN git clone https://github.com/waymo-research/waymo-open-dataset.git /workspace/waymo-od && \
-	micromamba run -n waymo_open_env pip install waymo-open-dataset-tf-2-12-0==1.6.4
+	pip install waymo-open-dataset-tf-2-12-0==1.6.4

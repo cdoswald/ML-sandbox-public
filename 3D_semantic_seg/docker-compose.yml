@@ -2,10 +2,15 @@ services:
   waymo-od-env:
     build: 
       context: .
+      dockerfile: Dockerfile.dev
     image: waymo-od-image
     container_name: waymo-od-container
     ports:
       - "8001:8001"
     volumes:
-      - ".:/workspace/hostfiles"
+      - .:/workspace/hostfiles
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      DISPLAY: ${DISPLAY}
+      QT_X11_NO_MITSHM: 1
     tty: true

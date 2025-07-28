@@ -5,11 +5,16 @@ FROM mambaorg/micromamba:2.3.0
 USER root
 RUN apt-get update && apt-get install -y \
 	git \
+	libgomp1 \
 	libegl1 \
 	libgl1 \
-	libgomp1 \
+	libgl1-mesa-glx \
+    libgl1-mesa-dri \
+    libglu1-mesa \
+    mesa-utils \
 	xvfb \
 	x11-utils \
+    x11-xserver-utils \
 	&& rm -rf /var/lib/apt/lists/*
 USER $MAMBA_USER
 

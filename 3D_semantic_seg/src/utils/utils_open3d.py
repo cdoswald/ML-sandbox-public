@@ -21,7 +21,20 @@ def visualize_pointcloud(
     save_video: bool = False,
     videos_dir: Optional[str] = None,
 ) -> None:
-    """ """ #TODO: add docstring
+    """Render and display pointcloud sequence from saved npz file.
+
+    Args:
+        pointcloud_file: pointcloud npz filename
+        pointcloud_dir: pointcloud npz directory name
+        output_resolution: (width, height) of rendered frames
+        fps: frames per second
+        camera_zoom: camera zoom amount
+        save_video: if True, will save rendered frames to .mp4 file
+        videos_dir: if save_video is True, then .mp4 file will be saved to this dir
+
+    Returns:
+        None
+    """
     video_writer = None
 
     # Create OpenCV video writer (if applicable)

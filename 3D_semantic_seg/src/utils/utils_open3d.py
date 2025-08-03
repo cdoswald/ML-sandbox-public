@@ -2,6 +2,7 @@
 
 import os
 import time
+from typing import Optional
 
 import cv2
 import numpy as np
@@ -14,7 +15,7 @@ from utils import utils_constants as utl_c
 def visualize_pointcloud(
     pointcloud_file: str,
     pointcloud_dir: str,
-    output_resolution: Tuple[int, int] = (1280, 720)
+    output_resolution: tuple[int, int] = (1280, 720),
     fps: float = 10.0,
     camera_zoom: Optional[float] = 0.2,
     save_video: bool = False,

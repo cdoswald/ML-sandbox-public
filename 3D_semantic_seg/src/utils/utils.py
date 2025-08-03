@@ -11,12 +11,12 @@ import pyarrow
 import pyarrow.compute as pc
 import pyarrow.dataset as pds
 import pyarrow.parquet as pq
-import tensorflow
-import tensorflow.compat.v1 as tf
 
-tf.enable_eager_execution()
+# import tensorflow
+# import tensorflow.compat.v1 as tf
+# tf.enable_eager_execution()
 
-from waymo_open_dataset import dataset_pb2 as wod
+# from waymo_open_dataset import dataset_pb2 as wod
 
 ## ------------------------------------------
 ## Utility functions for Parquet data format
@@ -147,33 +147,33 @@ def filter_rows_equal(
 ## ------------------------------------------
 ## Utility functions for TFRecord data format
 ## ------------------------------------------
-def load_TFRecord(
-    datadir: str,
-    filename: str,
-) -> tf.data.Dataset:
-    """Load TFRecord dataset."""
-    return tf.data.TFRecordDataset(
-        os.path.join(datadir, filename),
-        compression_type="",
-    )
+# def load_TFRecord(
+#     datadir: str,
+#     filename: str,
+# ) -> tf.data.Dataset:
+#     """Load TFRecord dataset."""
+#     return tf.data.TFRecordDataset(
+#         os.path.join(datadir, filename),
+#         compression_type="",
+#     )
 
-def extract_frames_from_TFRecord(
-    dataset: tf.data.Dataset,
-    max_n_frames: Optional[int] = None,
-) -> List[wod.Frame]:
-    """Extract frames (sequences) from TFRecord dataset."""
-    # Validate max_n_frames arg
-    if max_n_frames is not None:
-        if (max_n_frames <= 0) or (not isinstance(max_n_frames, int)):
-            raise ValueError(
-                f"max_n_frames argument ({max_n_frames}) must be positive integer"
-            )
-    # Extract frames
-    frames = []
-    for data in dataset:
-        frame = wod.Frame()
-        frame.ParseFromString(bytearray(data.numpy()))
-        frames.append(frame)
-        if (max_n_frames is not None) and (len(frames) >= max_n_frames):
-            break
-    return frames
+# def extract_frames_from_TFRecord(
+#     dataset: tf.data.Dataset,
+#     max_n_frames: Optional[int] = None,
+# ) -> List[wod.Frame]:
+#     """Extract frames (sequences) from TFRecord dataset."""
+#     # Validate max_n_frames arg
+#     if max_n_frames is not None:
+#         if (max_n_frames <= 0) or (not isinstance(max_n_frames, int)):
+#             raise ValueError(
+#                 f"max_n_frames argument ({max_n_frames}) must be positive integer"
+#             )
+#     # Extract frames
+#     frames = []
+#     for data in dataset:
+#         frame = wod.Frame()
+#         frame.ParseFromString(bytearray(data.numpy()))
+#         frames.append(frame)
+#         if (max_n_frames is not None) and (len(frames) >= max_n_frames):
+#             break
+#     return frames

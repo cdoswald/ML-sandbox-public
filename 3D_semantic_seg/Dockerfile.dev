@@ -34,6 +34,11 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER env_dev.yml /workspace/env_dev.yml
 RUN micromamba install -y -n base -f /workspace/env_dev.yml && \
 	micromamba clean --all --yes
 
+# Install Open3D (cannot install via conda in env.yml file since conda
+# does not properly expose open3d.visualization.rendering module for 
+# headless rendering)
+RUN pip install open3d==0.19.0
+
 # # Clone and install Waymo open dataset
 # RUN git clone https://github.com/waymo-research/waymo-open-dataset.git /workspace/waymo-od && \
 # 	pip install waymo-open-dataset-tf-2-12-0 --no-deps && \

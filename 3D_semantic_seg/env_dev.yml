@@ -18,7 +18,6 @@ dependencies:
   - libffi
   - matplotlib
   - numpy
-  - open3d
   - opencv
   - openpyxl
   - openssl

@@ -1,5 +1,6 @@
 services:
   waymo-od-env:
+    user: root
     build: 
       context: .
       dockerfile: Dockerfile.dev

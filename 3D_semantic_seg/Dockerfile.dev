@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y \
 	libgomp1 \
 	libegl1 \
 	libgl1 \
+	libosmesa6 \
+    libosmesa6-dev \
 	libgl1-mesa-glx \
     libgl1-mesa-dri \
     libglu1-mesa \

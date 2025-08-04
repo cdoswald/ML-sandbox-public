@@ -33,12 +33,17 @@ def convert_lidar_range_image_to_xyz_coords(
         raise ValueError(
             f"Lidar return ID must be 1 or 2; got {lidar_return_count}"
         )
+    if (lidar_segment_table is not None) and (lidar_segment_table.shape != lidar_image_table.shape):
+        raise ValueError(
+            f"Lidar segmentation table shape ({lidar_segment_table.shape}) must match " +
+            f"lidar image table shape ({lidar_image_table.shape})"
+        )
 
     # Extract lidar values
     col_prefix = f"[LiDARComponent].range_image_return{lidar_return_count}"
-    lidar_shape = lidar_image_table.column(f"{col_prefix}.shape").combine_chunks().to_pylist()[0]
+    lidar_shape = lidar_image_table.column(f"{col_prefix}.shape").combine_chunks().to_pylist()[0] #TODO: remove indexing when modifying for batches
     lidar_vals = np.array(
-        lidar_image_table.column(f"{col_prefix}.values").combine_chunks().to_pylist()[0]
+        lidar_image_table.column(f"{col_prefix}.values").combine_chunks().to_pylist()[0] #TODO: remove indexing when modifying for batches
     ).reshape(lidar_shape)[..., lidar_return_type]
 
     # import matplotlib.pyplot as plt
@@ -90,9 +95,9 @@ def convert_lidar_range_image_to_xyz_coords(
     if lidar_segment_table is not None:
 
         semseg_col_prefix = f"[LiDARSegmentationLabelComponent].range_image_return{lidar_return_count}"
-        semseg_shape = lidar_segment_table.column(f"{semseg_col_prefix}.shape").combine_chunks().to_pylist()[0]
+        semseg_shape = lidar_segment_table.column(f"{semseg_col_prefix}.shape").combine_chunks().to_pylist()[0] #TODO: remove indexing when modifying for batches
         semseg_vals = np.array(
-            lidar_segment_table.column(f"{semseg_col_prefix}.values").combine_chunks().to_pylist()[0]
+            lidar_segment_table.column(f"{semseg_col_prefix}.values").combine_chunks().to_pylist()[0] #TODO: remove indexing when modifying for batches
         ).reshape(semseg_shape) # Return all final dims (0 is instance ID, 1 is class ID)
 
         points = np.concatenate([points, semseg_vals], axis=-1)

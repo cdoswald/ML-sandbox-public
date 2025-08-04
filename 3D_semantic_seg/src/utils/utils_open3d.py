@@ -46,7 +46,6 @@ def visualize_pointcloud_headless(
     materials = o3d.visualization.rendering.MaterialRecord()
     materials.shader = "defaultLit"
 
-
     # Set up Open3D renderer
     renderer = o3d.visualization.rendering.OffscreenRenderer(
         width=output_resolution[0], height=output_resolution[1]
@@ -69,16 +68,16 @@ def visualize_pointcloud_headless(
         points_xyz = points[..., :3].reshape((-1, 3))
         pcd.points = o3d.utility.Vector3dVector(points_xyz)
 
-        # # Add semseg labels (if applicable)
-        # if points.shape[-1] > 3:
-        #     points_semseg = points[..., 3:]
-        #     points_instances = points_semseg[..., 0].flatten()
-        #     points_classes = points_semseg[..., 1].flatten()
+        # Add semseg labels (if applicable)
+        if points.shape[-1] > 3:
+            points_semseg = points[..., 3:]
+            points_instances = points_semseg[..., 0].flatten()
+            points_classes = points_semseg[..., 1].flatten()
 
-        #     # Map semseg classes to colormap
-        #     color_dict = utl_c.get_semseg_rgb_map()
-        #     colors = np.array([color_dict[label] for label in points_classes])
-        #     pcd.colors = o3d.utility.Vector3dVector(colors)
+            # Map semseg classes to colormap
+            color_dict = utl_c.get_semseg_rgb_map()
+            colors = np.array([color_dict[label] for label in points_classes])
+            pcd.colors = o3d.utility.Vector3dVector(colors)
 
         # Update geometry
         if not first_pass:
@@ -161,16 +160,16 @@ def visualize_pointcloud(
         points_xyz = points[..., :3].reshape((-1, 3))
         pcd.points = o3d.utility.Vector3dVector(points_xyz)
 
-        # # Add semseg labels (if applicable)
-        # if points.shape[-1] > 3:
-        #     points_semseg = points[..., 3:]
-        #     points_instances = points_semseg[..., 0].flatten()
-        #     points_classes = points_semseg[..., 1].flatten()
+        # Add semseg labels (if applicable)
+        if points.shape[-1] > 3:
+            points_semseg = points[..., 3:]
+            points_instances = points_semseg[..., 0].flatten()
+            points_classes = points_semseg[..., 1].flatten()
 
-        #     # Map semseg classes to colormap
-        #     color_dict = utl_c.get_semseg_rgb_map()
-        #     colors = np.array([color_dict[label] for label in points_classes])
-        #     pcd.colors = o3d.utility.Vector3dVector(colors)
+            # Map semseg classes to colormap
+            color_dict = utl_c.get_semseg_rgb_map()
+            colors = np.array([color_dict[label] for label in points_classes])
+            pcd.colors = o3d.utility.Vector3dVector(colors)
 
         # Update geometry
         if first_pass:

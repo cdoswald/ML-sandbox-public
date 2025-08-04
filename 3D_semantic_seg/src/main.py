@@ -1,6 +1,6 @@
 """Main execution"""
 
-interactive_mode = True #TODO: remove
+interactive_mode = True
 if interactive_mode:
     import os
     os.chdir("/workspace/hostfiles/src")
@@ -19,20 +19,22 @@ import pyarrow.compute as pc
 import polars as pl
 import torch
 
-from waymo_open_dataset import dataset_pb2 as wod
-from waymo_open_dataset.utils import (
-    frame_utils,
-    range_image_utils,
-)
+# from waymo_open_dataset import dataset_pb2 as wod
+# from waymo_open_dataset.utils import (
+#     frame_utils,
+#     range_image_utils,
+# )
 
 from models import PlaceholderModel
 
-from utils import utils as util
-from utils import utils_camera as util_cam
-from utils import utils_constants as util_cons
-from utils import utils_lidar as util_li
-from utils import utils_plotting as util_p
-from utils import utils_waymo as util_w
+from utils import utils as utl
+from utils import utils_camera as utl_cam
+from utils import utils_constants as utl_cons
+from utils import utils_lidar as utl_li
+from utils import utils_open3d as utl_o3d
+
+# from utils import utils_plotting as utl_p
+# from utils import utils_waymo as utl_w
 
 
 if __name__ == "__main__":
@@ -46,8 +48,8 @@ if __name__ == "__main__":
     # LASER_NAME_MAP = dict(wod.LaserName.Name.items())
     # CAMERA_NAME_MAP = dict(wod.CameraName.Name.items())
     # LIDAR_RETURN_MAP = dict()
-    # RANGE_IMAGE_DIM_MAP = util_cons.get_range_image_final_dim_dict()
-    # SEG_IMAGE_DIM_MAP = util_cons.get_seg_image_final_dim_dict()
+    # RANGE_IMAGE_DIM_MAP = utl_cons.get_range_image_final_dim_dict()
+    # SEG_IMAGE_DIM_MAP = utl_cons.get_seg_image_final_dim_dict()
 
     DATA_DIR = "/workspace/hostfiles/data"
     VIDEOS_DIR = "/workspace/hostfiles/videos"
@@ -77,17 +79,17 @@ if __name__ == "__main__":
     for file_id in file_ids:
 
         # Get column names of tables
-        camera_image_cols = util.get_parquet_col_names(DATA_DIR, file_id, "camera_image")
-        camera_box_cols = util.get_parquet_col_names(DATA_DIR, file_id, "camera_box")
-        camera_calib_cols = util.get_parquet_col_names(DATA_DIR, file_id, "camera_calibration")
-        camera_segment_cols = util.get_parquet_col_names(DATA_DIR, file_id, "camera_segmentation")
+        camera_image_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "camera_image")
+        camera_box_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "camera_box")
+        camera_calib_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "camera_calibration")
+        camera_segment_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "camera_segmentation")
 
-        lidar_image_cols = util.get_parquet_col_names(DATA_DIR, file_id, "lidar")
-        lidar_calib_cols = util.get_parquet_col_names(DATA_DIR, file_id, "lidar_calibration")
-        lidar_segment_cols = util.get_parquet_col_names(DATA_DIR, file_id, "lidar_segmentation")
+        lidar_image_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "lidar")
+        lidar_calib_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "lidar_calibration")
+        lidar_segment_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "lidar_segmentation")
 
         # Get list of observation ids that have 3D semantic segmentation labels
-        lidar_segment_table_all = util.load_parquet_data(DATA_DIR, file_id, "lidar_segmentation")
+        lidar_segment_table_all = utl.load_parquet_data(DATA_DIR, file_id, "lidar_segmentation")
         labeled_obs_ids = lidar_segment_table_all["index"].combine_chunks().to_pylist()
         print(f"# of labeled obs ids: {len(labeled_obs_ids)}")
 
@@ -95,34 +97,31 @@ if __name__ == "__main__":
         filter_lidar_rows = {"index":labeled_obs_ids, "key.laser_name":[1]}
         filter_camera_rows = {"index":labeled_obs_ids, "key.camera_name":list(np.arange(1, 6))}
 
-        camera_image_table = util.load_parquet_data(
+        camera_image_table = utl.load_parquet_data(
             DATA_DIR, file_id, "camera_image", filter_rows=filter_camera_rows
         )
-        camera_box_table = util.load_parquet_data(
+        camera_box_table = utl.load_parquet_data(
             DATA_DIR, file_id, "camera_box", filter_rows=filter_camera_rows
         )
-        camera_calib_table = util.load_parquet_data(
+        camera_calib_table = utl.load_parquet_data(
             DATA_DIR, file_id, "camera_calibration", filter_rows=filter_camera_rows
         )
-        camera_segment_table = util.load_parquet_data(
+        camera_segment_table = utl.load_parquet_data(
             DATA_DIR, file_id, "camera_segmentation", filter_rows=filter_camera_rows
         )
 
-        lidar_calib_table = util.load_parquet_data(
+        lidar_calib_table = utl.load_parquet_data(
             DATA_DIR, file_id, "lidar_calibration", filter_rows=filter_lidar_rows
-        )
-        lidar_segment_table = util.load_parquet_data(
-            DATA_DIR, file_id, "lidar_segmentation", filter_rows=filter_lidar_rows
         )
 
         # Display camera images with object boxes
-        camera_image_table_obs = util.filter_rows_equal(camera_image_table, filter_camera_rows)
+        camera_image_table_obs = utl.filter_rows_equal(camera_image_table, filter_camera_rows)
     
         camera_frames = {}
         for camera_id in range(10):
             print(f"Trying camera id {camera_id}")
             try:
-                camera_frames[camera_id] = util_cam.extract_camera_images(
+                camera_frames[camera_id] = utl_cam.extract_camera_images(
                     camera_image_table_obs,
                     camera_box_table,
                     camera_id=camera_id,
@@ -130,26 +129,24 @@ if __name__ == "__main__":
             except ValueError as e:
                 print(f"Could not extract frames for camera_id={camera_id}; got error: '{e}'")
         
-        # util_cam.display_frames(camera_frames) # Multicamera
-        # util_cam.display_frames(camera_frames[1]) # Single camera
-        
-        util_cam.write_frames_to_video_file(
+        utl_cam.write_frames_to_video_file(
             camera_frames,
             VIDEOS_DIR,
             f"camera_{file_id}",
             fps=5.0,
         )
 
-        #TODO: left off here; need to create a sequence of LiDAR 3D point clouds
-
         # Get lidar range values for one observation at a time due to memory constraints
         all_points_dict = {}
         for labeled_obs_id in sorted(labeled_obs_ids):
             filter_lidar_rows["index"] = [labeled_obs_id]
-            lidar_image_table = util.load_parquet_data(
+            lidar_image_table = utl.load_parquet_data(
                 DATA_DIR, file_id, "lidar", filter_rows=filter_lidar_rows
             )
-            points = util_li.convert_lidar_range_image_to_xyz_coords(
+            lidar_segment_table = utl.load_parquet_data(
+                DATA_DIR, file_id, "lidar_segmentation", filter_rows=filter_lidar_rows
+            )
+            points = utl_li.convert_lidar_range_image_to_xyz_coords(
                 lidar_image_table, lidar_calib_table, lidar_segment_table, convert_to_world_ref=False
             )
             all_points_dict[labeled_obs_id] = points
@@ -159,27 +156,21 @@ if __name__ == "__main__":
             **{k:v for k,v in all_points_dict.items()}
         )
 
-        from utils_open3d import visualize_pointcloud
-
-        visualize_pointcloud(
+        utl_o3d.visualize_pointcloud_headless(
             pointcloud_file=f"pointcloud_{file_id}.npz",
             pointcloud_dir=POINTCLOUD_DIR,
-            save_video=True,
-            videos_dir=VIDEOS_DIR
+            videos_dir=VIDEOS_DIR,
+            fps=5
         )
 
         break
 
+
+        #TODO: resolve pylint errors (switch to Ruff?)
+        #TODO: display pointcloud and camera videos side-by-side
+        #TODO: modify to handle batch size > 1 obs
+        #TODO: start developing ML model
     
-
-            
-            # TODO:
-            # - modify to handle batch > 1 observation
-
-
-                
-        
-            
 
 
 # "index" = key.segment_context_name + key.frame_timestamp_micros
@@ -202,7 +193,7 @@ if __name__ == "__main__":
 
 
 #     # Extract frames
-#     frames = util.extract_frames_from_datafile(dataset)
+#     frames = utl.extract_frames_from_datafile(dataset)
 #     frame = frames[24]  # TODO: generalize
 
 #     # Parse range images
@@ -213,23 +204,23 @@ if __name__ == "__main__":
 #     # Convert range and segmentation images to tensors
 #     ## range_images, camera_projections, and seg_labels are
 #     ## dictionaries formatted: {laser_index: [return1, return2]}
-#     range_image_tensor = util.convert_range_image_to_tensor(
+#     range_image_tensor = utl.convert_range_image_to_tensor(
 #         range_images[LASER_NAME_MAP["TOP"]][0]
 #     )
-#     cp_tensor = util.convert_range_image_to_tensor(
+#     cp_tensor = utl.convert_range_image_to_tensor(
 #         camera_projections[LASER_NAME_MAP["TOP"]][0]
 #     )
-#     seg_image_tensor = util.convert_range_image_to_tensor(
+#     seg_image_tensor = utl.convert_range_image_to_tensor(
 #         seg_labels[LASER_NAME_MAP["TOP"]][0]
 #     )
 
 #     # Plot example range and segmentation image
-#     util_p.plot_range_image_tensor(
+#     utl_p.plot_range_image_tensor(
 #         range_image_tensor,
 #         RANGE_IMAGE_DIM_MAP,
 #         invert_colormap=True,
 #     )
-#     util_p.plot_range_image_tensor(
+#     utl_p.plot_range_image_tensor(
 #         seg_image_tensor, SEG_IMAGE_DIM_MAP, style_params={"cmap": "tab20"}
 #     )
 
@@ -241,7 +232,7 @@ if __name__ == "__main__":
 #         range_image_top_pose,
 #         ri_index=0,  # First return
 #     )
-#     point_labels = util_w.convert_range_image_to_point_cloud_labels(
+#     point_labels = utl_w.convert_range_image_to_point_cloud_labels(
 #         frame,
 #         range_images,
 #         seg_labels,

@@ -20,7 +20,7 @@ jobs:
     - name: Run pylint inside Docker container
       run: |
         docker compose -f 3D_semantic_seg/docker-compose.yml exec -T waymo-od-env \
-          conda run -n waymo_open_env \
+          micromamba run -n waymo_open_env \
           bash -c "\
             pip install pylint && \
             cd /workspace/hostfiles &&

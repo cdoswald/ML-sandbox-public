@@ -24,7 +24,7 @@ jobs:
           bash -c "\
             pip install pylint && \
             cd /workspace/hostfiles &&
-            pylint \$(git ls-files 'src/*.py')"
+            pylint src"
 
     - name: Tear down Docker container
       run: docker compose -f 3D_semantic_seg/docker-compose.yml down

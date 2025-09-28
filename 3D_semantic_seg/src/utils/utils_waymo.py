@@ -82,43 +82,43 @@ import numpy as np
 #   return points_indexing_top
 
 
-## Source: https://github.com/waymo-research/waymo-open-dataset/blob/master/tutorial/tutorial_3d_semseg.ipynb
-def compress_array(array: np.ndarray, is_int32: bool = False):
-  """Compress a numpy array to ZLIP compressed serialized MatrixFloat/Int32.
+# ## Source: https://github.com/waymo-research/waymo-open-dataset/blob/master/tutorial/tutorial_3d_semseg.ipynb
+# def compress_array(array: np.ndarray, is_int32: bool = False):
+#   """Compress a numpy array to ZLIP compressed serialized MatrixFloat/Int32.
 
-  Args:
-    array: A numpy array.
-    is_int32: If true, use MatrixInt32, otherwise use MatrixFloat.
+#   Args:
+#     array: A numpy array.
+#     is_int32: If true, use MatrixInt32, otherwise use MatrixFloat.
 
-  Returns:
-    The compressed bytes.
-  """
-  if is_int32:
-    m = open_dataset.MatrixInt32()
-  else:
-    m = open_dataset.MatrixFloat()
-  m.shape.dims.extend(list(array.shape))
-  m.data.extend(array.reshape([-1]).tolist())
-  return zlib.compress(m.SerializeToString())
+#   Returns:
+#     The compressed bytes.
+#   """
+#   if is_int32:
+#     m = open_dataset.MatrixInt32()
+#   else:
+#     m = open_dataset.MatrixFloat()
+#   m.shape.dims.extend(list(array.shape))
+#   m.data.extend(array.reshape([-1]).tolist())
+#   return zlib.compress(m.SerializeToString())
 
 
-## Source: https://github.com/waymo-research/waymo-open-dataset/blob/master/tutorial/tutorial_3d_semseg.ipynb
-def decompress_array(array_compressed: bytes, is_int32: bool = False):
-  """Decompress bytes (of serialized MatrixFloat/Int32) to a numpy array.
+# ## Source: https://github.com/waymo-research/waymo-open-dataset/blob/master/tutorial/tutorial_3d_semseg.ipynb
+# def decompress_array(array_compressed: bytes, is_int32: bool = False):
+#   """Decompress bytes (of serialized MatrixFloat/Int32) to a numpy array.
 
-  Args:
-    array_compressed: bytes.
-    is_int32: If true, use MatrixInt32, otherwise use MatrixFloat.
+#   Args:
+#     array_compressed: bytes.
+#     is_int32: If true, use MatrixInt32, otherwise use MatrixFloat.
 
-  Returns:
-    The decompressed numpy array.
-  """
-  decompressed = zlib.decompress(array_compressed)
-  if is_int32:
-    m = open_dataset.MatrixInt32()
-    dtype = np.int32
-  else:
-    m = open_dataset.MatrixFloat()
-    dtype = np.float32
-  m.ParseFromString(decompressed)
-  return np.array(m.data, dtype=dtype).reshape(m.shape.dims)
+#   Returns:
+#     The decompressed numpy array.
+#   """
+#   decompressed = zlib.decompress(array_compressed)
+#   if is_int32:
+#     m = open_dataset.MatrixInt32()
+#     dtype = np.int32
+#   else:
+#     m = open_dataset.MatrixFloat()
+#     dtype = np.float32
+#   m.ParseFromString(decompressed)
+#   return np.array(m.data, dtype=dtype).reshape(m.shape.dims)

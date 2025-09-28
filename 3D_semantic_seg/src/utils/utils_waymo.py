@@ -6,9 +6,9 @@ functions but that have been modified will be stored in utils.py
 (with source info).
 """
 
-import zlib
+# import zlib
 
-import numpy as np
+# import numpy as np
 
 # import tensorflow
 # import tensorflow.compat.v1 as tf

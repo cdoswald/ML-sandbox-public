@@ -70,7 +70,7 @@ def visualize_pointcloud_headless(
         # Add semseg labels (if applicable)
         if points.shape[-1] > 3:
             points_semseg = points[..., 3:]
-            points_instances = points_semseg[..., 0].flatten()
+            # points_instances = points_semseg[..., 0].flatten()
             points_classes = points_semseg[..., 1].flatten()
 
             # Map semseg classes to colormap
@@ -162,7 +162,7 @@ def visualize_pointcloud(
         # Add semseg labels (if applicable)
         if points.shape[-1] > 3:
             points_semseg = points[..., 3:]
-            points_instances = points_semseg[..., 0].flatten()
+            # points_instances = points_semseg[..., 0].flatten()
             points_classes = points_semseg[..., 1].flatten()
 
             # Map semseg classes to colormap

@@ -6,25 +6,22 @@ if interactive_mode:
     os.chdir("/workspace/hostfiles/src")
     print(os.getcwd())
 
-import os
-import numpy as np
+import os                                   #noqa: E402
+import numpy as np                          #noqa: E402
 
+from utils import utils as utl              #noqa: E402
+from utils import utils_camera as utl_cam   #noqa: E402
+from utils import utils_lidar as utl_li     #noqa: E402
+from utils import utils_open3d as utl_o3d   #noqa: E402
+
+# from utils import utils_plotting as utl_p
+# from utils import utils_waymo as utl_w
 
 # from waymo_open_dataset import dataset_pb2 as wod
 # from waymo_open_dataset.utils import (
 #     frame_utils,
 #     range_image_utils,
 # )
-
-
-from utils import utils as utl
-from utils import utils_camera as utl_cam
-from utils import utils_lidar as utl_li
-from utils import utils_open3d as utl_o3d
-
-# from utils import utils_plotting as utl_p
-# from utils import utils_waymo as utl_w
-
 
 if __name__ == "__main__":
 

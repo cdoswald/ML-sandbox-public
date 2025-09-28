@@ -1,0 +1,3 @@
+[tool.ruff]
+exclude = ["**/_archive/*"]
+line-length = 88

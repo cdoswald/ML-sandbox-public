@@ -3,14 +3,12 @@
 from functools import reduce
 import operator
 import os
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Dict, List, Optional, Union
 import warnings
 
-import matplotlib.pyplot as plt
 import pyarrow
 import pyarrow.compute as pc
 import pyarrow.dataset as pds
-import pyarrow.parquet as pq
 
 # import tensorflow
 # import tensorflow.compat.v1 as tf
@@ -94,7 +92,7 @@ def load_parquet_data(
             row_filter = filter_exprs[0]
         else:
             warnings.warn(
-                f"User provided filter_rows arg, but no filter expressions could "+
+                "User provided filter_rows arg, but no filter expressions could "+
                 "be generated. Check that column names in filter_rows match data schema."
             )
     # Filter columns

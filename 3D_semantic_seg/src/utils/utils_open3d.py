@@ -6,7 +6,6 @@ from typing import Optional
 
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 import open3d as o3d
 
 from utils import utils_constants as utl_c

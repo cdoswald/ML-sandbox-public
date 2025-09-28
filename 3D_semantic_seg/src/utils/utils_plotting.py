@@ -1,12 +1,6 @@
 """Plotting utility functions"""
 
-import io
-import os
-from typing import Dict, List, Optional, Tuple, Union
-import warnings
 
-import matplotlib.pyplot as plt
-import numpy as np
 
 # import tensorflow
 # import tensorflow.compat.v1 as tf

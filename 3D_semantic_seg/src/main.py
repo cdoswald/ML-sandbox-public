@@ -6,18 +6,9 @@ if interactive_mode:
     os.chdir("/workspace/hostfiles/src")
     print(os.getcwd())
 
-import io
-import logging
 import os
 import numpy as np
-from PIL import Image, ImageDraw
-from typing import Optional, Union
 
-import pyarrow
-import pyarrow.parquet as pq
-import pyarrow.compute as pc
-import polars as pl
-import torch
 
 # from waymo_open_dataset import dataset_pb2 as wod
 # from waymo_open_dataset.utils import (
@@ -25,11 +16,9 @@ import torch
 #     range_image_utils,
 # )
 
-from models import PlaceholderModel
 
 from utils import utils as utl
 from utils import utils_camera as utl_cam
-from utils import utils_constants as utl_cons
 from utils import utils_lidar as utl_li
 from utils import utils_open3d as utl_o3d
 

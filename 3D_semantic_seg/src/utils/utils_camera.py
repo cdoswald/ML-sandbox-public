@@ -1,10 +1,7 @@
 """Camera utility functions"""
 
-from itertools import chain
-import io
 import os
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
-import warnings
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import cv2
 import matplotlib.pyplot as plt

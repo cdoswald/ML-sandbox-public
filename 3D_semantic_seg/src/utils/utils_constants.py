@@ -1,10 +1,8 @@
 """Constant utility functions"""
 
-import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import matplotlib.colors as mcolors
-import matplotlib.pyplot as plt
 
 
 def get_laser_idx_map() -> Dict[int, str]:

@@ -31,6 +31,7 @@ dependencies:
   - pytorch>=2.3.0
   - pytorch-cuda>=11.8
   - ptyprocess
+  - ruff
   - setuptools
   - sqlite>=3.45
   - torchvision

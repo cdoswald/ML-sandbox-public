@@ -6,12 +6,8 @@ functions but that have been modified will be stored in utils.py
 (with source info).
 """
 
-import os
-from typing import Dict, List, Optional, Tuple
-import warnings
 import zlib
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 # import tensorflow

@@ -9,6 +9,7 @@ if interactive_mode:
 import os                                   #noqa: E402
 import numpy as np                          #noqa: E402
 
+from config import Config
 from utils import utils as utl              #noqa: E402
 from utils import utils_camera as utl_cam   #noqa: E402
 from utils import utils_lidar as utl_li     #noqa: E402
@@ -37,12 +38,9 @@ if __name__ == "__main__":
     # RANGE_IMAGE_DIM_MAP = utl_cons.get_range_image_final_dim_dict()
     # SEG_IMAGE_DIM_MAP = utl_cons.get_seg_image_final_dim_dict()
 
-    DATA_DIR = "/workspace/hostfiles/data"
-    VIDEOS_DIR = "/workspace/hostfiles/videos"
-    POINTCLOUD_DIR = "/workspace/hostfiles/pointclouds"
 
-    os.makedirs(VIDEOS_DIR, exist_ok=True)
-    os.makedirs(POINTCLOUD_DIR, exist_ok=True)
+    # Get config args
+    args = Config()
     
     # Get list of file IDs that are present in all data subfolders
     file_ids = []

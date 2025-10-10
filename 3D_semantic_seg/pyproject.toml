@@ -6,4 +6,5 @@ line-length = 88
 python_version = 3.11
 ignore_missing_imports = true
 strict = true
+
 exclude = "_archive/"

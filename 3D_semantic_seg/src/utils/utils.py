@@ -16,16 +16,17 @@ import pyarrow.dataset as pds
 
 # from waymo_open_dataset import dataset_pb2 as wod
 
+
 ## ------------------------------------------
 ## General utility functions
 ## ------------------------------------------
-def get_ids_of_complete_data_files() -> list[str]:
+def get_ids_of_complete_data_files(data_dir: str) -> list[str]:
     """Get file ids for which data are available in each data subdirectory."""
     file_ids = set()
-    for i, data_subdir in enumerate(os.listdir(args.data_dir)):
+    for i, data_subdir in enumerate(os.listdir(data_dir)):
         data_subdir_ids = set([
                 x.split(".")[0] 
-                for x in os.listdir(os.path.join(args.data_dir, data_subdir))
+                for x in os.listdir(os.path.join(data_dir, data_subdir))
                 if x.endswith(".parquet")
             ])
         if i == 0:

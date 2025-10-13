@@ -42,7 +42,7 @@ if __name__ == "__main__":
     args = Config()
     
     # Get list of file IDs that are present in all data subfolders
-    file_ids = utl.get_ids_of_complete_data_files()
+    file_ids = utl.get_ids_of_complete_data_files(args.data_dir)
     print(f"Total # of file IDs: {len(file_ids)}")
 
     # Load data for file ID

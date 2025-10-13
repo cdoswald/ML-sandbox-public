@@ -17,6 +17,24 @@ import pyarrow.dataset as pds
 # from waymo_open_dataset import dataset_pb2 as wod
 
 ## ------------------------------------------
+## General utility functions
+## ------------------------------------------
+def get_ids_of_complete_data_files() -> list[str]:
+    """Get file ids for which data are available in each data subdirectory."""
+    file_ids = set()
+    for i, data_subdir in enumerate(os.listdir(args.data_dir)):
+        data_subdir_ids = set([
+                x.split(".")[0] 
+                for x in os.listdir(os.path.join(args.data_dir, data_subdir))
+                if x.endswith(".parquet")
+            ])
+        if i == 0:
+            file_ids.update(data_subdir_ids)
+        else:
+            file_ids.intersection_update(data_subdir_ids)
+    return sorted(list(file_ids))
+
+## ------------------------------------------
 ## Utility functions for Parquet data format
 ## ------------------------------------------
 def get_parquet_col_names(

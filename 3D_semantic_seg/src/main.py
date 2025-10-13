@@ -38,64 +38,41 @@ if __name__ == "__main__":
     # RANGE_IMAGE_DIM_MAP = utl_cons.get_range_image_final_dim_dict()
     # SEG_IMAGE_DIM_MAP = utl_cons.get_seg_image_final_dim_dict()
 
-
     # Get config args
     args = Config()
     
     # Get list of file IDs that are present in all data subfolders
-    file_ids = []
-    camera_image_files = os.listdir(os.path.join(DATA_DIR, "camera_image"))
-    for camera_image_file in camera_image_files:
-        file_ids.append(camera_image_file.split(".")[0])
-    for data_subdir in os.listdir(DATA_DIR):
-        for file_id in file_ids:
-            file_id_missing = True
-            for file in os.listdir(os.path.join(DATA_DIR, data_subdir)):
-                if file_id == file.split(".")[0]:
-                    file_id_missing = False
-                    break
-            if file_id_missing:
-                file_ids.remove(file_id)
-                print(f"Removed file ID {file_id} (missing in {data_subdir})")
+    file_ids = utl.get_ids_of_complete_data_files()
     print(f"Total # of file IDs: {len(file_ids)}")
 
     # Load data for file ID
     for file_id in file_ids:
 
-        # Get column names of tables
-        camera_image_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "camera_image")
-        camera_box_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "camera_box")
-        camera_calib_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "camera_calibration")
-        camera_segment_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "camera_segmentation")
-
-        lidar_image_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "lidar")
-        lidar_calib_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "lidar_calibration")
-        lidar_segment_cols = utl.get_parquet_col_names(DATA_DIR, file_id, "lidar_segmentation")
-
-        # Get list of observation ids that have 3D semantic segmentation labels
-        lidar_segment_table_all = utl.load_parquet_data(DATA_DIR, file_id, "lidar_segmentation")
+        # Get list of observation ids that have 3D semantic segmentation labels (not all are labeled)
+        lidar_segment_table_all = utl.load_parquet_data(args.data_dir, file_id, "lidar_segmentation")
         labeled_obs_ids = lidar_segment_table_all["index"].combine_chunks().to_pylist()
         print(f"# of labeled obs ids: {len(labeled_obs_ids)}")
 
         # Extract labeled LiDAR data and corresponding camera images
+        # ("index" = key.segment_context_name + key.frame_timestamp_micros)
         filter_lidar_rows = {"index":labeled_obs_ids, "key.laser_name":[1]}
         filter_camera_rows = {"index":labeled_obs_ids, "key.camera_name":list(np.arange(1, 6))}
 
         camera_image_table = utl.load_parquet_data(
-            DATA_DIR, file_id, "camera_image", filter_rows=filter_camera_rows
+            args.data_dir, file_id, "camera_image", filter_rows=filter_camera_rows
         )
         camera_box_table = utl.load_parquet_data(
-            DATA_DIR, file_id, "camera_box", filter_rows=filter_camera_rows
+            args.data_dir, file_id, "camera_box", filter_rows=filter_camera_rows
         )
         camera_calib_table = utl.load_parquet_data(
-            DATA_DIR, file_id, "camera_calibration", filter_rows=filter_camera_rows
+            args.data_dir, file_id, "camera_calibration", filter_rows=filter_camera_rows
         )
         camera_segment_table = utl.load_parquet_data(
-            DATA_DIR, file_id, "camera_segmentation", filter_rows=filter_camera_rows
+            args.data_dir, file_id, "camera_segmentation", filter_rows=filter_camera_rows
         )
 
         lidar_calib_table = utl.load_parquet_data(
-            DATA_DIR, file_id, "lidar_calibration", filter_rows=filter_lidar_rows
+            args.data_dir, file_id, "lidar_calibration", filter_rows=filter_lidar_rows
         )
 
         # Display camera images with object boxes
@@ -125,10 +102,10 @@ if __name__ == "__main__":
         for labeled_obs_id in sorted(labeled_obs_ids):
             filter_lidar_rows["index"] = [labeled_obs_id]
             lidar_image_table = utl.load_parquet_data(
-                DATA_DIR, file_id, "lidar", filter_rows=filter_lidar_rows
+                args.data_dir, file_id, "lidar", filter_rows=filter_lidar_rows
             )
             lidar_segment_table = utl.load_parquet_data(
-                DATA_DIR, file_id, "lidar_segmentation", filter_rows=filter_lidar_rows
+                args.data_dir, file_id, "lidar_segmentation", filter_rows=filter_lidar_rows
             )
             points = utl_li.convert_lidar_range_image_to_xyz_coords(
                 lidar_image_table, lidar_calib_table, lidar_segment_table, convert_to_world_ref=False
@@ -146,5 +123,3 @@ if __name__ == "__main__":
             videos_dir=VIDEOS_DIR,
             fps=5
         )
-
-# "index" = key.segment_context_name + key.frame_timestamp_micros

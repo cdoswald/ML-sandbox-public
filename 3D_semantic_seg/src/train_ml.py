@@ -10,6 +10,7 @@ import os                                   #noqa: E402
 import numpy as np                          #noqa: E402
 
 from config import Config
+from training_datasets import RangeImageDataset
 from utils import utils as utl              #noqa: E402
 from utils import utils_camera as utl_cam   #noqa: E402
 from utils import utils_lidar as utl_li     #noqa: E402
@@ -24,15 +25,17 @@ if __name__ == "__main__":
     # (note that each file in the lidar range image data contains multiple timesteps/observations,
     # and each observation has 5 lidar range image records--one for each laser. 
     # Only the lidar range images for the top-mounted laser have lidar segmentation labels, and
-    # only about 30-50 of the approx. 200 timestep observations in each file for the 
-    # top-mounted laser have labels)
-    labeled_file_obs: dict[str, list[str]] = {}
+    # only about 30-50 of the approx. 200 timestep observations for the top-mounted laser in each 
+    # file  have labels)
+    labeled_file_obs: list[tuple[str, str]] = []
     for file_id in file_ids:
         lidar_segment_table_all = utl.load_parquet_data(args.data_dir, file_id, "lidar_segmentation")
         labeled_obs_ids = lidar_segment_table_all["index"].combine_chunks().to_pylist()
-        labeled_file_obs[file_id] = labeled_obs_ids
+        labeled_file_obs.extend([(file_id, obs_id) for obs_id in labeled_obs_ids])
  
     # Create PyTorch dataset and dataloader
+    dataset = RangeImageDataset(labeled_file_obs, args.data_dir)
+
 
 
 

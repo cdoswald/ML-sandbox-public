@@ -9,6 +9,10 @@ class Config:
     videos_dir = "/workspace/hostfiles/videos"
     pointcloud_dir = "/workspace/hostfiles/pointclouds"
 
+    batch_size: int = 4
+    
+    validation_share: float = 0.2
+    test_share: float = 0.2
 
     def __post_init__(self):
 

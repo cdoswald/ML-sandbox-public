@@ -3,9 +3,11 @@
 import torch
 from torch.utils.data import Dataset
 
+from utils import utils as utl
 
 class RangeImageDataset(Dataset):
-    
+    """Custom PyTorch dataset class for LiDAR range image data."""
+
     def __init__(
         self,
         labeled_file_obs: list[tuple[str, str]],

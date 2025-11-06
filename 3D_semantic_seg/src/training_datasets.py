@@ -10,12 +10,12 @@ class RangeImageDataset(Dataset):
 
     def __init__(
         self,
-        labeled_file_obs: list[tuple[str, str]],
+        labeled_file_obs: dict[str, list[str]],
         data_dir: str,
     ) -> None:
         """
         Args:
-            labeled_file_obs: list of tuples containing (file_id, obs_id)
+            labeled_file_obs: dict mapping file_id to list of file observation ids
             data_dir: str path to data directory
 
         Returns:
@@ -23,11 +23,17 @@ class RangeImageDataset(Dataset):
         """
         self.labeled_file_obs = labeled_file_obs
         self.data_dir = data_dir
+        
+        # Format labeled_file_obs for __getitem__ indexing
+        self.file_obs_tuples: list[tuple[str, str]] = []
+        for file_id, obs_ids in labeled_file_obs.items():
+            self.file_obs_tuples.extend([(file_id, obs_id)] for obs_id in obs_ids)
 
 
     def __len__(self) -> int:
-        return len(self.labeled_file_obs)
-    
+        return len(self.file_obs_tuples)
+
+
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         """Get range image and corresponding segmentation labels.
         
@@ -38,7 +44,7 @@ class RangeImageDataset(Dataset):
             tuple of PyTorch tensors containing (range_image, range_image_labels)
         """
         
-        file_id, obs_id = self.labeled_file_obs[idx]
+        file_id, obs_id = self.file_obs_tuples[idx]
 
         # Load pyarrow tables for lidar image and lidar segmentation labels
         filter_lidar_rows = {"index":[obs_id], "key.laser_name":[1]} # single obs only; top laser only

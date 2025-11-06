@@ -29,14 +29,14 @@ if __name__ == "__main__":
     # Only the lidar range images for the top-mounted laser have lidar segmentation labels, and
     # only about 30-50 of the approx. 200 timestep observations for the top-mounted laser in each 
     # file  have labels)
-    labeled_file_obs: list[tuple[str, str]] = []
+    labeled_file_obs: dict[str, list[str]] = {}
     for file_id in file_ids:
         lidar_segment_table_all = utl.load_parquet_data(args.data_dir, file_id, "lidar_segmentation")
         labeled_obs_ids = lidar_segment_table_all["index"].combine_chunks().to_pylist()
-        labeled_file_obs.extend([(file_id, obs_id) for obs_id in labeled_obs_ids])
+        labeled_file_obs[file_id] = labeled_obs_ids
  
     # Split train, validation, and test at the file_id level 
-    # (all timesteps in the same driving segment will be grouped together)
+    # (all observations in the same driving segment will be grouped in the same split)
     train_share = (1 - args.validation_share - args.test_share)
     if train_share < 0.1:
         raise ValueError(f"Training data share must be at least 0.1, but got {train_share}")
@@ -55,17 +55,30 @@ if __name__ == "__main__":
         set(file_ids).difference(train_file_ids).difference(validation_file_ids)
     ))
     print(
-        f"# obs in Training set: {len(train_file_ids)} / {n_file_ids}"+
-        f"\n# obs in Validation set: {len(validation_file_ids)} / {n_file_ids}" +
-        f"\n# obs in Test set: {len(test_file_ids)} / {n_file_ids}"
+        f"\n# file ids in Training set: {len(train_file_ids)} / {n_file_ids}"+
+        f"\n# file ids in Validation set: {len(validation_file_ids)} / {n_file_ids}" +
+        f"\n# file ids in Test set: {len(test_file_ids)} / {n_file_ids}"
     )
 
-    # Create PyTorch dataset and dataloader
-    # train_data = RangeImageDataset(labeled_file_obs, args.data_dir)
-    # validation_data = RangeImageDataset(labeled_file_obs, args.data_dir)
-    # test_data = RangeImageDataset(labeled_file_obs, args.data_dir)
+    # Create PyTorch dataset and dataloaders
+    train_file_obs = {k:v for k,v in labeled_file_obs.items() if k in train_file_ids}
+    validation_file_obs = {k:v for k,v in labeled_file_obs.items() if k in validation_file_ids}
+    test_file_obs = {k:v for k,v in labeled_file_obs.items() if k in test_file_ids}
 
+    train_data = RangeImageDataset(train_file_obs, args.data_dir)
+    validation_data = RangeImageDataset(validation_file_obs, args.data_dir)
+    test_data = RangeImageDataset(test_file_obs, args.data_dir)
 
+    n_total_obs = sum([len(x) for x in labeled_file_obs.values()])
+    print(
+        f"\n# obs in Training set: {len(train_data)} / {n_total_obs}"+
+        f"\n# obs in Validation set: {len(validation_data)} / {n_total_obs}" +
+        f"\n# obs in Test set: {len(test_data)} / {n_total_obs}"
+    )
+
+    train_dl = DataLoader(train_data, batch_size=1, shuffle=True)
+    validation_dl = DataLoader(validation_data, batch_size=1, shuffle=True)
+    test_dl = DataLoader(test_data, batch_size=1, shuffle=False)
 
 
     # # plot range image

@@ -34,6 +34,7 @@ dependencies:
   - ruff
   - setuptools
   - sqlite>=3.45
+  - tensorboard
   - torchvision
   - typing-extensions>=4.14.1
   - wheel

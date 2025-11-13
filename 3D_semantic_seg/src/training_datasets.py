@@ -27,7 +27,7 @@ class RangeImageDataset(Dataset):
         # Format labeled_file_obs for __getitem__ indexing
         self.file_obs_tuples: list[tuple[str, str]] = []
         for file_id, obs_ids in labeled_file_obs.items():
-            self.file_obs_tuples.extend([(file_id, obs_id)] for obs_id in obs_ids)
+            self.file_obs_tuples.extend([(file_id, obs_id) for obs_id in obs_ids])
 
 
     def __len__(self) -> int:

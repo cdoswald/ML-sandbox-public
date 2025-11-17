@@ -9,6 +9,7 @@ class Config:
     videos_dir = "/workspace/hostfiles/videos"
     pointcloud_dir = "/workspace/hostfiles/pointclouds"
 
+    max_epochs: int = 2
     batch_size: int = 4
     
     validation_share: float = 0.2

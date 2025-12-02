@@ -12,17 +12,20 @@ class RangeImageDataset(Dataset):
         self,
         labeled_file_obs: dict[str, list[str]],
         data_dir: str,
+        return_channels_first: bool = True,
     ) -> None:
         """
         Args:
             labeled_file_obs: dict mapping file_id to list of file observation ids
             data_dir: str path to data directory
+            return_channels_first: if True, return [C, H, W]; otherwise, return [H, W, C]
 
         Returns:
             None
         """
         self.labeled_file_obs = labeled_file_obs
         self.data_dir = data_dir
+        self.return_channels_first = return_channels_first
         
         # Format labeled_file_obs for __getitem__ indexing
         self.file_obs_tuples: list[tuple[str, str]] = []
@@ -83,7 +86,7 @@ class RangeImageDataset(Dataset):
             [0]
         )
         range_image = torch.tensor(range_image.reshape(range_image_shape))
-        
+
         range_image_labels = (
             lidar_segment_table["[LiDARSegmentationLabelComponent].range_image_return1.values"]
             .combine_chunks()
@@ -97,5 +100,10 @@ class RangeImageDataset(Dataset):
             [0]
         )
         range_image_labels = torch.tensor(range_image_labels.reshape(range_image_labels_shape))
+
+        # Permute to return channels first (if applicable)
+        if self.return_channels_first:
+            range_image = torch.permute(range_image, (2, 0, 1))
+            range_image_labels = torch.permute(range_image_labels, (2, 0, 1))
 
         return range_image, range_image_labels

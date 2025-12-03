@@ -24,7 +24,10 @@ class BaselineCNN(nn.Module):
         conv_layers: list[int],
         avgpool_layers: list[tuple[int, int]],
         conv_kernel_size: int = 5,
+        repeat_conv_n_times: int = 3,
+        verbose: bool = True,
     ) -> None:
+
         super().__init__()
         self.batch_size, self.in_channels, self.height, self.width = example_batch.shape
 
@@ -33,9 +36,19 @@ class BaselineCNN(nn.Module):
             raise ValueError(f"Convolution kernel size must be an odd integer; got {conv_kernel_size}")
         padding = conv_kernel_size // 2
 
-        # Check that number of avgpool layers matches the number of convolutional layers
-        if len(conv_layers) != len(avgpool_layers):
-            raise ValueError(f"Arguments 'conv_layers' and 'avgpool_layers' must be same length")
+        # Check that correct number of avgpool layers provided
+        n_avgpool_layers = len(avgpool_layers)
+        n_expected_avgpool_layers = len(conv_layers) - 1
+        if n_avgpool_layers > n_expected_avgpool_layers:
+            raise ValueError(
+                f"Too many 'avgpool_layers' provided; expected {n_expected_avgpool_layers} " +
+                f"but got {n_avgpool_layers}"
+            )
+        if n_avgpool_layers < n_expected_avgpool_layers:
+            raise ValueError(
+                f"Too few 'avgpool_layers' provided; expected {n_expected_avgpool_layers} " +
+                f"but got {n_avgpool_layers}"
+            )
 
         # Check that final height and width are integers
         height_reduc_factor = math.prod([x[0] for x in avgpool_layers])
@@ -47,60 +60,63 @@ class BaselineCNN(nn.Module):
         if not final_height.is_integer() or not final_width.is_integer():
             raise ValueError(f"Final height and width must be integers; got ({final_height}, {final_width})")
 
-        # Create encoder
+        # Create encoder layers
         encoder_layers = nn.ModuleList()
         curr_in_channels = self.in_channels
+        for i, conv_channels in enumerate(conv_layers):
+            # Conv block
+            for _ in range(repeat_conv_n_times):
+                encoder_conv_layer = nn.Conv2d(
+                    curr_in_channels,
+                    conv_channels,
+                    conv_kernel_size,
+                    padding=padding,
+                )
+                encoder_norm_layer = nn.InstanceNorm2d(conv_channels)
+                encoder_activ_layer = nn.SiLU()
+                encoder_layers.extend([
+                    encoder_conv_layer,
+                    encoder_norm_layer,
+                    encoder_activ_layer,
+                ])
+                # Update in-channels
+                curr_in_channels = conv_channels
+            # Downsample (for all but last encoder block)
+            if i < len(conv_layers) - 1:
+                encoder_layers.append(nn.AvgPool2d(avgpool_layers[i]))
 
-        hidden_layers=[128, 256, 512, 1024], #TODO: remove
-        avgpool_layers=[(1,5), (1,5), (1,2), (2,1)] #TODO: remove
-        
-        for conv_channels, avgpool_kernel in zip(conv_layers, avgpool_layers):
-            encoder_conv_layer = nn.Conv2d(
-                curr_in_channels,
-                conv_channels,
-                conv_kernel_size,
-                padding=padding,
-            )
-            encoder_norm_layer = nn.InstanceNorm2d(conv_channels)
-            encoder_activ_layer = nn.SiLU()
-            encoder_downsample_layer = nn.AvgPool2d(avgpool_kernel)
-            encoder_layers.extend([
-                encoder_conv_layer,
-                encoder_norm_layer,
-                encoder_activ_layer,
-                encoder_downsample_layer
-            ])
-            curr_in_channels = conv_channels
-
-        self.encoder = nn.Sequential(*encoder_layers)
-        print(f"Encoder: {self.encoder}")
-
-        # Create decoder (upsample to restore original spatial dimensions)
+        # Create decoder layers
         decoder_layers = nn.ModuleList()
-        # TODO: left off here on 12/1 at 11:00pm; need to figure out how to align convolution channels
-        # and upsampling operations (currently off by 1)
-        for conv_channels, avgpool_kernel in zip(reversed(conv_layers), reversed(avgpool_layers)):
-            decoder_upsample_layer = nn.Upsample(
-                scale_factor=avgpool_kernel,
-                mode="bilinear",
-                align_corners=False,
+        rev_conv_layers = list(reversed(conv_layers[:-1]))
+        upsample_layers = list(reversed(avgpool_layers))
+        for j, conv_channels in enumerate(rev_conv_layers):
+            # Upsample
+            decoder_layers.append(
+                nn.Upsample(
+                    scale_factor=upsample_layers[j],
+                    mode="bilinear",
+                    align_corners=False,
+                )
             )
-            decoder_conv_layer = nn.Conv2d(
-                curr_in_channels,
-                conv_channels,
-                conv_kernel_size,
-                padding=padding,
-            )
-            decoder_norm_layer = nn.InstanceNorm2d(conv_channels)
-            decoder_activ_layer = nn.SiLU()
-            decoder_layers.extend([
-                decoder_upsample_layer,
-                decoder_conv_layer,
-                decoder_norm_layer,
-                decoder_activ_layer,
-            ])
-            curr_in_channels = conv_channels
+            # Conv block
+            for _ in range(repeat_conv_n_times):
+                decoder_conv_layer = nn.Conv2d(
+                    curr_in_channels,
+                    conv_channels,
+                    conv_kernel_size,
+                    padding=padding,
+                )
+                decoder_norm_layer = nn.InstanceNorm2d(conv_channels)
+                decoder_activ_layer = nn.SiLU()
+                decoder_layers.extend([
+                    decoder_conv_layer,
+                    decoder_norm_layer,
+                    decoder_activ_layer,
+                ])
+                # Update in-channels
+                curr_in_channels = conv_channels
 
+        # Add classification head
         logit_head = nn.Conv2d(
             curr_in_channels,
             n_classes,
@@ -108,8 +124,14 @@ class BaselineCNN(nn.Module):
         )
         decoder_layers.append(logit_head)
 
+        # Unpack layers to Sequential
+        self.encoder = nn.Sequential(*encoder_layers)
         self.decoder = nn.Sequential(*decoder_layers)
-        print(f"Decoder: {self.decoder}")
+
+        # Print model details
+        if verbose:
+            print(f"Encoder: {self.encoder}")
+            print(f"Decoder: {self.decoder}")
 
 
     def forward(self, x: torch.tensor):

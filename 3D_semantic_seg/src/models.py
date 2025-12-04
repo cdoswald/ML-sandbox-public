@@ -21,11 +21,11 @@ class BaselineCNN(nn.Module):
         self,
         example_batch: torch.Tensor,
         n_classes: int,
-        conv_layers: list[int],
+        hidden_channels: list[int],
         avgpool_layers: list[tuple[int, int]],
         conv_kernel_size: int = 5,
         repeat_conv_n_times: int = 3,
-        verbose: bool = True,
+        verbose: bool = False,
     ) -> None:
 
         super().__init__()
@@ -38,7 +38,7 @@ class BaselineCNN(nn.Module):
 
         # Check that correct number of avgpool layers provided
         n_avgpool_layers = len(avgpool_layers)
-        n_expected_avgpool_layers = len(conv_layers) - 1
+        n_expected_avgpool_layers = len(hidden_channels) - 1
         if n_avgpool_layers > n_expected_avgpool_layers:
             raise ValueError(
                 f"Too many 'avgpool_layers' provided; expected {n_expected_avgpool_layers} " +
@@ -63,16 +63,16 @@ class BaselineCNN(nn.Module):
         # Create encoder layers
         encoder_layers = nn.ModuleList()
         curr_in_channels = self.in_channels
-        for i, conv_channels in enumerate(conv_layers):
+        for i, curr_hidden_channels in enumerate(hidden_channels):
             # Conv block
             for _ in range(repeat_conv_n_times):
                 encoder_conv_layer = nn.Conv2d(
                     curr_in_channels,
-                    conv_channels,
+                    curr_hidden_channels,
                     conv_kernel_size,
                     padding=padding,
                 )
-                encoder_norm_layer = nn.InstanceNorm2d(conv_channels)
+                encoder_norm_layer = nn.InstanceNorm2d(curr_hidden_channels)
                 encoder_activ_layer = nn.SiLU()
                 encoder_layers.extend([
                     encoder_conv_layer,
@@ -80,16 +80,16 @@ class BaselineCNN(nn.Module):
                     encoder_activ_layer,
                 ])
                 # Update in-channels
-                curr_in_channels = conv_channels
+                curr_in_channels = curr_hidden_channels
             # Downsample (for all but last encoder block)
-            if i < len(conv_layers) - 1:
+            if i < len(hidden_channels) - 1:
                 encoder_layers.append(nn.AvgPool2d(avgpool_layers[i]))
 
         # Create decoder layers
         decoder_layers = nn.ModuleList()
-        rev_conv_layers = list(reversed(conv_layers[:-1]))
+        rev_hidden_channels = list(reversed(hidden_channels[:-1]))
         upsample_layers = list(reversed(avgpool_layers))
-        for j, conv_channels in enumerate(rev_conv_layers):
+        for j, curr_hidden_channels in enumerate(rev_hidden_channels):
             # Upsample
             decoder_layers.append(
                 nn.Upsample(
@@ -102,11 +102,11 @@ class BaselineCNN(nn.Module):
             for _ in range(repeat_conv_n_times):
                 decoder_conv_layer = nn.Conv2d(
                     curr_in_channels,
-                    conv_channels,
+                    curr_hidden_channels,
                     conv_kernel_size,
                     padding=padding,
                 )
-                decoder_norm_layer = nn.InstanceNorm2d(conv_channels)
+                decoder_norm_layer = nn.InstanceNorm2d(curr_hidden_channels)
                 decoder_activ_layer = nn.SiLU()
                 decoder_layers.extend([
                     decoder_conv_layer,
@@ -114,7 +114,7 @@ class BaselineCNN(nn.Module):
                     decoder_activ_layer,
                 ])
                 # Update in-channels
-                curr_in_channels = conv_channels
+                curr_in_channels = curr_hidden_channels
 
         # Add classification head
         logit_head = nn.Conv2d(

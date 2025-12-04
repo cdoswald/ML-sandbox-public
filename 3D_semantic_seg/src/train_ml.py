@@ -6,16 +6,21 @@ if interactive_mode:
     os.chdir("/workspace/hostfiles/src")
     print(os.getcwd())
 
-import os                                   #noqa: E402
-import numpy as np                          #noqa: E402
+import os                                       #noqa: E402
+import numpy as np                              #noqa: E402
+import torch.nn as nn
+from torch.optim import Adam, AdamW
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 from config import Config
+from models import BaselineCNN
 from training_datasets import RangeImageDataset
-from utils import utils as utl              #noqa: E402
-from utils import utils_camera as utl_cam   #noqa: E402
-from utils import utils_lidar as utl_li     #noqa: E402
-from utils import utils_open3d as utl_o3d   #noqa: E402
+from utils import utils as utl                  #noqa: E402
+from utils import utils_camera as utl_cam       #noqa: E402
+from utils import utils_constants as utl_cons   #noqa: E402
+from utils import utils_lidar as utl_li         #noqa: E402
+from utils import utils_open3d as utl_o3d       #noqa: E402
 
 
 if __name__ == "__main__":
@@ -76,11 +81,31 @@ if __name__ == "__main__":
         f"\n# obs in Test set: {len(test_data)} / {n_total_obs}"
     )
 
-    train_dl = DataLoader(train_data, batch_size=1, shuffle=True)
-    validation_dl = DataLoader(validation_data, batch_size=1, shuffle=True)
-    test_dl = DataLoader(test_data, batch_size=1, shuffle=False)
+    train_dl = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
+    validation_dl = DataLoader(validation_data, batch_size=args.batch_size, shuffle=True)
+    test_dl = DataLoader(test_data, batch_size=args.batch_size, shuffle=False)
 
+    # Create model, optimizer, and loss function
+    example_input, example_target = next(iter(train_dl))
+    model = BaselineCNN(
+        example_input,
+        n_classes=len(utl_cons.get_semseg_idx_map()),
+        hidden_channels=[128, 256, 512, 1024],
+        avgpool_layers=[(1,5), (1,5), (1,2)],
+        verbose=True
+    )
+    optimizer = Adam(model.parameters(), lr=args.lr)
+    loss_func = nn.CrossEntropyLoss()
 
-    # # plot range image
-    # plt.imshow(temp[..., 0])
+    # model(example_input)
+
+    # Train model
+    writer = SummaryWriter("runs/run_001")
+    for epoch_i in range(args.max_epochs):
+        for batch_j, (range_image, range_image_labels) in enumerate(train_dl):
+            break
+
+            # writer.add_scalar()
+    
+
     

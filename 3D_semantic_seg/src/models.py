@@ -3,7 +3,7 @@
 import math
 
 import torch
-from torch import nn
+import torch.nn as nn
 
 
 class BaselineCNN(nn.Module):

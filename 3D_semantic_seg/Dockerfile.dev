@@ -6,17 +6,17 @@ USER root
 RUN apt-get update && apt-get install -y \
 	git \
 	libgomp1 \
-	libegl1 \
-	libgl1 \
+	# libegl1 \
+	# libgl1 \
 	libosmesa6 \
     libosmesa6-dev \
 	libgl1-mesa-glx \
     libgl1-mesa-dri \
     libglu1-mesa \
     mesa-utils \
-	xvfb \
-	x11-utils \
-    x11-xserver-utils \
+	# xvfb \
+	# x11-utils \
+    # x11-xserver-utils \
 	sqlite3 \
 	&& rm -rf /var/lib/apt/lists/*
 
@@ -26,8 +26,10 @@ RUN mkdir -p /workspace && \
 WORKDIR /workspace
 USER $MAMBA_USER
 
-# Set environment activation variable
+# Set environment variables
 ENV MAMBA_DOCKERFILE_ACTIVATE=1
+ENV OPEN3D_RENDERING_ENGINE=OSMesa
+ENV OPEN3D_CPU_RENDERING=1
 
 # Copy and install environment
 COPY --chown=$MAMBA_USER:$MAMBA_USER env_dev.yml /workspace/env_dev.yml

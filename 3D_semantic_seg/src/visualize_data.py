@@ -92,7 +92,7 @@ if __name__ == "__main__":
         
         utl_cam.write_frames_to_video_file(
             camera_frames,
-            VIDEOS_DIR,
+            args.videos_dir,
             f"camera_{file_id}",
             fps=5.0,
         )
@@ -113,13 +113,15 @@ if __name__ == "__main__":
             all_points_dict[labeled_obs_id] = points
 
         np.savez(
-            os.path.join(POINTCLOUD_DIR, f"pointcloud_{file_id}.npz"),
+            os.path.join(args.pointcloud_dir, f"pointcloud_{file_id}.npz"),
             **{k:v for k,v in all_points_dict.items()}
         )
 
         utl_o3d.visualize_pointcloud_headless(
             pointcloud_file=f"pointcloud_{file_id}.npz",
-            pointcloud_dir=POINTCLOUD_DIR,
-            videos_dir=VIDEOS_DIR,
+            pointcloud_dir=args.pointcloud_dir,
+            videos_dir=args.videos_dir,
             fps=5
         )
+        
+        break

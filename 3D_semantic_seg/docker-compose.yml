@@ -10,12 +10,13 @@ services:
       - "8001:8001"
     volumes:
       - .:/workspace/hostfiles
-      - /tmp/.X11-unix:/tmp/.X11-unix
-      - /tmp/runtime-mambauser:/tmp/runtime-mambauser
+      # - /tmp/.X11-unix:/tmp/.X11-unix
+      # - /tmp/runtime-mambauser:/tmp/runtime-mambauser
     environment:
-      DISPLAY: ${DISPLAY}
-      XDG_RUNTIME_DIR: /tmp/runtime-mambauser
-      QT_X11_NO_MITSHM: 1
+      # DISPLAY: ${DISPLAY}
+      # XDG_RUNTIME_DIR: /tmp/runtime-mambauser
+      # QT_X11_NO_MITSHM: 1
+      EGL_PLATFORM: surfaceless
     tty: true
     deploy:
       resources:

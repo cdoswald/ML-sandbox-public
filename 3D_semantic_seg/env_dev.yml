@@ -12,6 +12,7 @@ dependencies:
   - ca-certificates
   - expat
   - google-cloud-storage
+  - hdf5
   - intel-openmp
   - ipykernel
   - ipython

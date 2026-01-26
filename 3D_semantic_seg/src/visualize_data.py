@@ -1,4 +1,4 @@
-"""Main execution"""
+"""Generate video and pointcloud visualizations for labeled data"""
 
 interactive_mode = True
 if interactive_mode:
@@ -7,6 +7,7 @@ if interactive_mode:
     print(os.getcwd())
 
 import os                                   #noqa: E402
+import h5py                                 #noqa: E402
 import numpy as np                          #noqa: E402
 
 from config import Config
@@ -31,13 +32,6 @@ if __name__ == "__main__":
     # logging.basicConfig(filename="main.log", encoding="utf-8", level=logging.DEBUG)
     # logger.debug("Logger set-up successful")
 
-    # Define constants
-    # LASER_NAME_MAP = dict(wod.LaserName.Name.items())
-    # CAMERA_NAME_MAP = dict(wod.CameraName.Name.items())
-    # LIDAR_RETURN_MAP = dict()
-    # RANGE_IMAGE_DIM_MAP = utl_cons.get_range_image_final_dim_dict()
-    # SEG_IMAGE_DIM_MAP = utl_cons.get_seg_image_final_dim_dict()
-
     # Get config args
     args = Config()
     
@@ -46,38 +40,32 @@ if __name__ == "__main__":
     print(f"Total # of file IDs: {len(file_ids)}")
 
     # Load data for file ID
-    for file_id in file_ids:
+    for i, file_id in enumerate(file_ids):
 
         # Get list of observation ids that have 3D semantic segmentation labels (not all are labeled)
         lidar_segment_table_all = utl.load_parquet_data(args.data_dir, file_id, "lidar_segmentation")
         labeled_obs_ids = lidar_segment_table_all["index"].combine_chunks().to_pylist()
         print(f"# of labeled obs ids: {len(labeled_obs_ids)}")
+        del lidar_segment_table_all
 
         # Extract labeled LiDAR data and corresponding camera images
         # ("index" = key.segment_context_name + key.frame_timestamp_micros)
         filter_lidar_rows = {"index":labeled_obs_ids, "key.laser_name":[1]}
         filter_camera_rows = {"index":labeled_obs_ids, "key.camera_name":list(np.arange(1, 6))}
 
-        camera_image_table = utl.load_parquet_data(
-            args.data_dir, file_id, "camera_image", filter_rows=filter_camera_rows
-        )
+        # Load tables that are small enough to load all observations in memory
         camera_box_table = utl.load_parquet_data(
             args.data_dir, file_id, "camera_box", filter_rows=filter_camera_rows
         )
-        camera_calib_table = utl.load_parquet_data(
-            args.data_dir, file_id, "camera_calibration", filter_rows=filter_camera_rows
-        )
-        camera_segment_table = utl.load_parquet_data(
-            args.data_dir, file_id, "camera_segmentation", filter_rows=filter_camera_rows
-        )
-
         lidar_calib_table = utl.load_parquet_data(
             args.data_dir, file_id, "lidar_calibration", filter_rows=filter_lidar_rows
         )
 
         # Display camera images with object boxes
-        camera_image_table_obs = utl.filter_rows_equal(camera_image_table, filter_camera_rows)
-    
+        camera_image_table_obs = utl.load_parquet_data(
+            args.data_dir, file_id, "camera_image", filter_rows=filter_camera_rows
+        )
+
         camera_frames = {}
         for camera_id in range(10):
             print(f"Trying camera id {camera_id}")
@@ -96,32 +84,37 @@ if __name__ == "__main__":
             f"camera_{file_id}",
             fps=5.0,
         )
+        
+        del camera_image_table_obs, camera_frames
 
         # Get lidar range values for one observation at a time due to memory constraints
-        all_points_dict = {}
-        for labeled_obs_id in sorted(labeled_obs_ids):
-            filter_lidar_rows["index"] = [labeled_obs_id]
-            lidar_image_table = utl.load_parquet_data(
-                args.data_dir, file_id, "lidar", filter_rows=filter_lidar_rows
-            )
-            lidar_segment_table = utl.load_parquet_data(
-                args.data_dir, file_id, "lidar_segmentation", filter_rows=filter_lidar_rows
-            )
-            points = utl_li.convert_lidar_range_image_to_xyz_coords(
-                lidar_image_table, lidar_calib_table, lidar_segment_table, convert_to_world_ref=False
-            )
-            all_points_dict[labeled_obs_id] = points
-
-        np.savez(
-            os.path.join(args.pointcloud_dir, f"pointcloud_{file_id}.npz"),
-            **{k:v for k,v in all_points_dict.items()}
-        )
-
+        # Use HDF5 for incremental writing to avoid memory exhaustion
+        output_pointcloud_file = os.path.join(args.pointcloud_dir, f"pointcloud_{file_id}.h5")
+        
+        with h5py.File(output_pointcloud_file, 'w') as f:
+            for labeled_obs_id in sorted(labeled_obs_ids):
+                filter_lidar_rows["index"] = [labeled_obs_id]
+                lidar_image_table = utl.load_parquet_data(
+                    args.data_dir, file_id, "lidar", filter_rows=filter_lidar_rows
+                )
+                lidar_segment_table = utl.load_parquet_data(
+                    args.data_dir, file_id, "lidar_segmentation", filter_rows=filter_lidar_rows
+                )
+                points = utl_li.convert_lidar_range_image_to_xyz_coords(
+                    lidar_image_table, lidar_calib_table, lidar_segment_table, convert_to_world_ref=False
+                )
+                # Write immediately without accumulating in memory
+                f.create_dataset(str(labeled_obs_id), data=points, compression='gzip', compression_opts=4)
+        
+        del lidar_image_table, lidar_segment_table, points
+                
+        # Visualize pointcloud with Open3D
         utl_o3d.visualize_pointcloud_headless(
-            pointcloud_file=f"pointcloud_{file_id}.npz",
+            pointcloud_file=f"pointcloud_{file_id}.h5",
             pointcloud_dir=args.pointcloud_dir,
             videos_dir=args.videos_dir,
             fps=5
         )
         
-        break
+        if i > 2:
+            break

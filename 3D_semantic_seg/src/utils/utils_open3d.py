@@ -1,10 +1,12 @@
 """Open3D utility functions"""
 
+import gc
 import os
 import time
 from typing import Optional
 
 import cv2
+import h5py
 import numpy as np
 import open3d as o3d
 
@@ -18,6 +20,7 @@ def visualize_pointcloud_headless(
     output_resolution: tuple[int, int] = (1280, 720),
     fps: float = 10.0,
     camera_zoom: Optional[float] = 0.2,
+    downsample_factor: Optional[tuple[int, int]] = (1, 1),
 ) -> None:
     """Render pointcloud sequence from saved npz file in headless environment
     (e.g., Docker container). Rendered image will only be saved to .mp4 file and
@@ -30,25 +33,31 @@ def visualize_pointcloud_headless(
         output_resolution: (width, height) of rendered frames
         fps: frames per second
         camera_zoom: camera zoom amount
+        downsample_factor: downsample points by this factor in each spatial dimension
+            (default=(1,1) means no downsampling, (2,2) means keep every 2nd point, etc.)
 
     Returns:
         None
     """
     # Create OpenCV video writer
+    print("[1/6] Creating video writer...")
     if videos_dir is None:
         raise ValueError("Argument 'videos_dir' required but not provided.")
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    video_file = os.path.join(videos_dir, pointcloud_file.replace(".npz", ".mp4"))
+    video_file = os.path.join(videos_dir, pointcloud_file.replace(".h5", ".mp4"))
     video_writer = cv2.VideoWriter(video_file, fourcc, fps, output_resolution)
 
     # Set up Open3D materials
+    print("[2/6] Setting up materials...")
     materials = o3d.visualization.rendering.MaterialRecord()
     materials.shader = "defaultLit"
 
     # Set up Open3D renderer
+    print("[3/6] Initializing offscreen renderer...")
     renderer = o3d.visualization.rendering.OffscreenRenderer(
         width=output_resolution[0], height=output_resolution[1]
     )
+    print("[4/6] Adding coordinate frame...")
     renderer.scene.add_geometry(
         "axes",
         o3d.geometry.TriangleMesh.create_coordinate_frame(),
@@ -56,11 +65,22 @@ def visualize_pointcloud_headless(
     )
 
     # Load and extract data
-    data = np.load(os.path.join(pointcloud_dir, pointcloud_file))
+    print("[5/6] Loading HDF5 file...")
+    data = h5py.File(os.path.join(pointcloud_dir, pointcloud_file), 'r')
+    print(f"Loaded {len(data.keys())} frames")
 
     # Display data stream
+    print("[6/6] Starting frame processing loop...")
     first_pass = True
-    for obs_id, points in data.items():
+    frame_count = 0
+    for obs_id in sorted(data.keys()):
+        points = data[obs_id][:]
+        
+        # Downsample (if applicable; reduces memory requirement)
+        if downsample_factor != (1, 1):
+            points = points[::downsample_factor[0], ::downsample_factor[1], :]
+
+        print(f"Frame {frame_count}: shape={points.shape}, size={points.nbytes/(1024**2):.2f} MB")
 
         # Add (x,y,z) coords
         pcd = o3d.geometry.PointCloud()
@@ -77,6 +97,9 @@ def visualize_pointcloud_headless(
             color_dict = utl_c.get_semseg_rgb_map()
             colors = np.array([color_dict[label] for label in points_classes])
             pcd.colors = o3d.utility.Vector3dVector(colors)
+            
+            # Clean up intermediate arrays
+            del points_semseg, points_classes, colors
 
         # Update geometry
         if not first_pass:
@@ -101,8 +124,17 @@ def visualize_pointcloud_headless(
 
         # Write frame to video
         video_writer.write(img_bgr)
+        
+        # Clean up memory after each frame
+        del points, points_xyz, pcd, img, img_bgr
+        
+        # Force garbage collection every 5 frames
+        frame_count += 1
+        if frame_count % 5 == 0:
+            gc.collect()
 
     # Clean up
+    data.close()
     video_writer.release()
     del renderer
 
@@ -115,6 +147,7 @@ def visualize_pointcloud(
     camera_zoom: Optional[float] = 0.2,
     save_video: bool = False,
     videos_dir: Optional[str] = None,
+    downsample_factor: Optional[tuple[int, int]] = (1, 1),
 ) -> None:
     """Render and display pointcloud sequence from saved npz file.
 
@@ -126,6 +159,8 @@ def visualize_pointcloud(
         camera_zoom: camera zoom amount
         save_video: if True, will save rendered frames to .mp4 file
         videos_dir: if save_video is True, then .mp4 file will be saved to this dir
+        downsample_factor: downsample points by this factor in each spatial dimension
+            (default=(1,1) means no downsampling, (2,2) means keep every 2nd point, etc.)
 
     Returns:
         None
@@ -137,7 +172,7 @@ def visualize_pointcloud(
         if videos_dir is None:
             raise ValueError("Argument 'videos_dir' required but not provided.")
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        video_file = os.path.join(videos_dir, pointcloud_file.replace(".npz", ".mp4"))
+        video_file = os.path.join(videos_dir, pointcloud_file.replace(".h5", ".mp4"))
         video_writer = cv2.VideoWriter(video_file, fourcc, fps, output_resolution)
 
     # Create Open3D visualizer
@@ -149,11 +184,18 @@ def visualize_pointcloud(
     pcd = o3d.geometry.PointCloud()
 
     # Load and extract data
-    data = np.load(os.path.join(pointcloud_dir, pointcloud_file))
+    data = h5py.File(os.path.join(pointcloud_dir, pointcloud_file), 'r')
 
     # Display data stream
     first_pass = True
-    for obs_id, points in data.items():
+    for obs_id in sorted(data.keys()):
+        points = data[obs_id][:]
+
+        # Downsample (if applicable; reduces memory requirement)
+        if downsample_factor != (1, 1):
+            points = points[::downsample_factor[0], ::downsample_factor[1], :]
+
+        print(f"Frame {frame_count}: shape={points.shape}, size={points.nbytes/(1024**2):.2f} MB")
 
         # Add (x,y,z) coords
         points_xyz = points[..., :3].reshape((-1, 3))
@@ -210,6 +252,7 @@ def visualize_pointcloud(
         time.sleep(1/fps)
 
     # Clean up
+    data.close()
     if video_writer is not None:
         video_writer.release()
     vis.destroy_window()

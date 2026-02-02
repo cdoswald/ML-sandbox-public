@@ -1,0 +1,23 @@
+services:
+  mujoco-env:
+    user: root
+    build: 
+      context: .
+      dockerfile: Dockerfile.dev
+    image: mujoco-image
+    container_name: mujoco-container
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/workspace
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /tmp/runtime-mambauser:/tmp/runtime-mambauser
+    environment:
+      DISPLAY: ${DISPLAY}
+      XDG_RUNTIME_DIR: /tmp/runtime-mambauser
+      QT_X11_NO_MITSHM: 1
+    tty: true
+    deploy:
+      resources:
+        limits:
+          memory: 12G

@@ -6,7 +6,7 @@ class Config:
     """Configuration parameters"""
 
     use_gcp: bool = True
-    gcp_data_dir: str = "gs://waymo_open_data_copy"
+    gcp_data_dir: str = "gs://waymo_open_data_copy/data"
     gcp_project_name: str = "waymo-3d-semseg"
 
     local_data_dir: str = "/workspace/hostfiles/data"

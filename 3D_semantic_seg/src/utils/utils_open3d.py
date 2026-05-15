@@ -10,7 +10,7 @@ import h5py
 import numpy as np
 import open3d as o3d
 
-from utils import utils_constants as utl_c
+from utils import utils_constants as utl_con
 
 
 def visualize_pointcloud_headless(
@@ -94,7 +94,7 @@ def visualize_pointcloud_headless(
             points_classes = points_semseg[..., 1].flatten()
 
             # Map semseg classes to colormap
-            color_dict = utl_c.get_semseg_rgb_map()
+            color_dict = utl_con.get_semseg_rgb_map()
             colors = np.array([color_dict[label] for label in points_classes])
             pcd.colors = o3d.utility.Vector3dVector(colors)
             
@@ -208,7 +208,7 @@ def visualize_pointcloud(
             points_classes = points_semseg[..., 1].flatten()
 
             # Map semseg classes to colormap
-            color_dict = utl_c.get_semseg_rgb_map()
+            color_dict = utl_con.get_semseg_rgb_map()
             colors = np.array([color_dict[label] for label in points_classes])
             pcd.colors = o3d.utility.Vector3dVector(colors)
 

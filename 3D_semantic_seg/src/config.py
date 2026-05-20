@@ -21,3 +21,12 @@ class Config:
         # Create directories
         os.makedirs(self.videos_dir, exist_ok=True)
         os.makedirs(self.pointcloud_dir, exist_ok=True)
+
+
+
+    # Define constants
+    # LASER_NAME_MAP = dict(wod.LaserName.Name.items())
+    # CAMERA_NAME_MAP = dict(wod.CameraName.Name.items())
+    # LIDAR_RETURN_MAP = dict()
+    # RANGE_IMAGE_DIM_MAP = utl_cons.get_range_image_final_dim_dict()
+    # SEG_IMAGE_DIM_MAP = utl_cons.get_seg_image_final_dim_dict()

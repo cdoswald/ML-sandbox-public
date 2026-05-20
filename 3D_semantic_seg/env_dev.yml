@@ -11,6 +11,7 @@ dependencies:
   - bzip2
   - ca-certificates
   - expat
+  - ffmpeg-python
   - google-cloud-storage
   - h5py
   - intel-openmp
@@ -26,7 +27,7 @@ dependencies:
   - pillow
   - pip
   - polars
-  - pyarrow>=18.1.0
+  - pyarrow>=24.0.0
   - python==3.11
   - python-dateutil
   - pytorch>=2.3.0

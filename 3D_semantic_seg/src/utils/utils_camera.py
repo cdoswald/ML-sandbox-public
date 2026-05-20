@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyarrow
 
-from utils import utils as util
-from utils import utils_constants as util_cons
+from utils import utils_parquet as utl_prq
+from utils import utils_constants as utl_con
 
 
 def extract_camera_images(
@@ -29,7 +29,7 @@ def extract_camera_images(
     Returns
         frames: list of image frames stored as numpy ndarrays
     """
-    camera_image_table = util.filter_rows_equal(camera_image_table, {"key.camera_name":[camera_id]})
+    camera_image_table = utl_prq.filter_rows_equal(camera_image_table, {"key.camera_name":[camera_id]})
     if len(camera_image_table) < 1:
         raise ValueError(
             f"Camera image table does not contain any observations with camera_id={camera_id}"
@@ -48,7 +48,7 @@ def extract_camera_images(
         obs_camera_image = cv2.cvtColor(obs_camera_image, cv2.COLOR_BGR2RGB)
         # Draw object bounding boxes (if applicable)
         if camera_box_table is not None:
-            obs_camera_boxes = util.filter_rows_equal(
+            obs_camera_boxes = utl_prq.filter_rows_equal(
                 camera_box_table, {"index":obs_id, "key.camera_name":[camera_id]}
             )
             for j in range(len(obs_camera_boxes)):
@@ -80,8 +80,8 @@ def orient_camera_ids(camera_ids: List[int]) -> List[int]:
             vehicle viewpoint
     """
     ordered_camera_ids = []
-    camera_name_idx_map = {v:k for k,v in util_cons.get_camera_idx_map().items()}
-    camera_name_order = util_cons.get_veh_view_camera_name_order()
+    camera_name_idx_map = {v:k for k,v in utl_con.get_camera_idx_map().items()}
+    camera_name_order = utl_con.get_veh_view_camera_name_order()
     for camera_name in camera_name_order:
         camera_idx = camera_name_idx_map.get(camera_name)
         if camera_idx is not None and camera_idx in camera_ids:

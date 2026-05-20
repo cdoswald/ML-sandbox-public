@@ -11,6 +11,7 @@ dependencies:
   - bzip2
   - ca-certificates
   - expat
+  - ffmpeg-python
   - google-cloud-storage
   - h5py
   - intel-openmp

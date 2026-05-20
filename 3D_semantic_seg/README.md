@@ -5,7 +5,7 @@ The original description for Waymo's 3D Semantic Segmentation challenge is avail
 ### Ground Truth Examples
 
 <p align="center" width="100%">
-<video src="docs/ground_truth_examples/combined_11004685739714500220_2300_000_2320_000.mp4" width="80%" controls></video>
+<video src="https://github.com/user-attachments/assets/659dae13-66ae-47e7-8644-08e4be282c35" width="80%" controls></video>
 </p>
 
 <p align="center" width="100%">

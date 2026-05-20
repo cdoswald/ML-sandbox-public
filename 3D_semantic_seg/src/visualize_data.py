@@ -12,9 +12,26 @@ from utils import utils_gcp as utl_gcp              #noqa: E402
 from utils import utils_lidar as utl_li             #noqa: E402
 from utils import utils_open3d as utl_o3d           #noqa: E402
 from utils import utils_parquet as utl_prq          #noqa: E402
+from utils import utils_video as utl_vid            #noqa: E402
 
 
-def process_scene(file_id, args_dict):
+def process_scene(
+    file_id: str, 
+    args_dict: dict,
+) -> None:
+    """
+    Process full labeled scene data for one file_id:
+        - Extract camera images and create video file
+        - Extract LiDAR range images, convert to pointclouds, and create video file
+        - Stack camera and pointcloud videos vertically (if applicable)
+    
+    Args:
+        file_id: file name (excluding .parquet suffix)
+        args_dict: dictionary of arguments (converted from dataclass)
+    
+    Returns:
+        None (saves video and pointcloud files to disk)
+    """
 
     # Convert args_dict back to dataclass
     class DummyArgs:
@@ -99,23 +116,23 @@ def process_scene(file_id, args_dict):
         fps=args.scene_vis_fps
     )
     
-    # Stitch camera and pointcloud videos together (if applicable)
-    if args.scene_vis_stitch_videos:
-        video_file = os.path.join(args.videos_dir, f"camera_{file_id}.mp4")
+    # Stack camera and pointcloud videos vertically (if applicable)
+    if args.scene_vis_vstack_videos:
+        camera_video_file = os.path.join(args.videos_dir, f"camera_{file_id}.mp4")
         pointcloud_video_file = os.path.join(args.videos_dir, f"pointcloud_{file_id}.mp4")
-        if os.path.exists(video_file) and os.path.exists(pointcloud_video_file):
-            output_video_file = os.path.join(args.videos_dir, f"combined_{file_id}.mp4")
-            # TODO
-            # utl_cam.stitch_videos(
-            #     video_file,
-            #     pointcloud_video_file,
-            #     output_video_file,
-            #     orientation="vertical",
-            # )
+        if os.path.exists(camera_video_file) and os.path.exists(pointcloud_video_file):
+            combined_video_file = os.path.join(args.videos_dir, f"combined_{file_id}.mp4")
+            utl_vid.vstack_videos(
+                camera_video_file,
+                pointcloud_video_file,
+                combined_video_file,
+                video1_crop_height=310,
+                video1_crop_y_offset=360,
+            )
         else:
             print(
-                f"[PID {os.getpid()}] {file_id}: Could not stitch videos together "+
-                f"since one or both video files were not found: '{video_file}', '{pointcloud_video_file}'"
+                f"[PID {os.getpid()}] {file_id}: Could not stitch videos together; "+
+                f"one or both video files were not found: '{camera_video_file}', '{pointcloud_video_file}'"
             )
 
 

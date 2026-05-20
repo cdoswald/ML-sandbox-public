@@ -16,7 +16,7 @@ class Config:
     # Scene visualization
     scene_vis_n_workers: int = 4
     scene_vis_fps: float = 5.0
-    scene_vis_stitch_videos: bool = True
+    scene_vis_vstack_videos: bool = True
 
     max_epochs: int = 2
     batch_size: int = 4

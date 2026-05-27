@@ -1,0 +1,28 @@
+name: base
+channels:
+  - conda-forge
+dependencies:
+  - python==3.11
+
+  - black
+  - google-cloud-storage
+  - gymnasium
+  - h5py
+  - ipykernel
+  - ipython
+  - matplotlib
+  - mujoco
+  - numpy
+  - opencv
+  - openpyxl
+  - openssl
+  - pandas
+  - pillow
+  - pip
+  - polars
+  - pyarrow>=18.1.0
+  - python-dateutil
+  - pytorch>=2.3.0
+  - ruff
+  - tensorboard
+  - typing-extensions

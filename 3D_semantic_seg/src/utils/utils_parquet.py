@@ -39,15 +39,15 @@ def get_parquet_col_names(
 
 
 def get_row_filter_intersection(
-    filter_rows: Dict[str, List[Union[str, int, float]]]
+    filter_rows: Dict[str, List[Union[str, int, float]]],
 ) -> Optional[pds.Expression]:
     """Get intersection of multiple row filter expressions for pyarrow dataset scanning.
-    
+
     Args:
         filter_rows: dict of {column_name_1:[filter_val_1, ...], ...}
-    
+
     Returns:
-        pyarrow dataset filter expression representing intersection of all filters, 
+        pyarrow dataset filter expression representing intersection of all filters,
         or None if no filters provided
     """
     row_filter = None
@@ -59,7 +59,7 @@ def get_row_filter_intersection(
                     f"All values in filter_rows dict must be lists; got {type(list_filter_vals)}"
                 )
             if len(list_filter_vals) == 1:
-                exprs = (pds.field(col_name) == list_filter_vals[0])
+                exprs = pds.field(col_name) == list_filter_vals[0]
             else:
                 exprs = pds.field(col_name).isin(list_filter_vals)
             filter_exprs.append(exprs)
@@ -71,8 +71,8 @@ def get_row_filter_intersection(
             row_filter = filter_exprs[0]
         else:
             warnings.warn(
-                "User provided filter_rows arg, but no filter expressions could "+
-                "be generated. Check that column names in filter_rows match data schema."
+                "User provided filter_rows arg, but no filter expressions could "
+                + "be generated. Check that column names in filter_rows match data schema."
             )
     return row_filter
 
@@ -110,8 +110,8 @@ def load_parquet_data(
         for col_name in filter_rows.keys():
             if col_name not in data.schema.names:
                 warnings.warn(
-                    f"Column '{col_name}' from filter_rows dict not found in schema "+
-                    f"(filepath = {file_path})"
+                    f"Column '{col_name}' from filter_rows dict not found in schema "
+                    + f"(filepath = {file_path})"
                 )
     row_filter = get_row_filter_intersection(filter_rows)
 
@@ -122,8 +122,8 @@ def load_parquet_data(
         for col_name in subset_cols:
             if col_name not in data.schema.names:
                 warnings.warn(
-                    f"Column '{col_name}' from subset_cols list not found in schema "+
-                    f"(filepath = {file_path})"
+                    f"Column '{col_name}' from subset_cols list not found in schema "
+                    + f"(filepath = {file_path})"
                 )
         subset_cols = [col for col in subset_cols if col in data.schema.names]
 
@@ -158,8 +158,6 @@ def filter_rows_equal(
     """
     mask = pyarrow.array([True] * len(table))
     for col_name, list_filter_vals in filter_dict.items():
-        condition_match = pc.is_in(
-            table[col_name], pyarrow.array(list_filter_vals)
-        )
+        condition_match = pc.is_in(table[col_name], pyarrow.array(list_filter_vals))
         mask = pc.and_kleene(mask, condition_match)
     return table.filter(mask)

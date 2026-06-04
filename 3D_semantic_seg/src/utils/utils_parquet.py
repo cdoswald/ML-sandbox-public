@@ -17,6 +17,7 @@ def _join_path(base: str, *parts: str) -> str:
         return "/".join([base.rstrip("/")] + [p.strip("/") for p in parts if p])
     return os.path.join(base, *parts)
 
+
 def get_parquet_col_names(
     data_dir: str,
     file_id: str,
@@ -35,6 +36,46 @@ def get_parquet_col_names(
         )
     file_path = _join_path(data_dir, data_subdir, f"{file_id}.parquet")
     return pds.dataset(file_path).schema.names
+
+
+def get_row_filter_intersection(
+    filter_rows: Dict[str, List[Union[str, int, float]]]
+) -> Optional[pds.Expression]:
+    """Get intersection of multiple row filter expressions for pyarrow dataset scanning.
+    
+    Args:
+        filter_rows: dict of {column_name_1:[filter_val_1, ...], ...}
+    
+    Returns:
+        pyarrow dataset filter expression representing intersection of all filters, 
+        or None if no filters provided
+    """
+    row_filter = None
+    if filter_rows is not None:
+        filter_exprs = []
+        for col_name, list_filter_vals in filter_rows.items():
+            if not isinstance(list_filter_vals, list):
+                raise ValueError(
+                    f"All values in filter_rows dict must be lists; got {type(list_filter_vals)}"
+                )
+            if len(list_filter_vals) == 1:
+                exprs = (pds.field(col_name) == list_filter_vals[0])
+            else:
+                exprs = pds.field(col_name).isin(list_filter_vals)
+            filter_exprs.append(exprs)
+
+        # Take intersection of all filter expressions
+        if len(filter_exprs) > 1:
+            row_filter = reduce(operator.and_, filter_exprs)
+        elif filter_exprs:
+            row_filter = filter_exprs[0]
+        else:
+            warnings.warn(
+                "User provided filter_rows arg, but no filter expressions could "+
+                "be generated. Check that column names in filter_rows match data schema."
+            )
+    return row_filter
+
 
 def load_parquet_data(
     data_dir: str,
@@ -63,37 +104,18 @@ def load_parquet_data(
         )
     file_path = _join_path(data_dir, data_subdir, f"{file_id}.parquet")
     data = pds.dataset(file_path, format="parquet")
-    # Filter rows
-    row_filter = None
+
+    # Get row filter intersection expression (if applicable)
     if filter_rows is not None:
-        filter_exprs = []
-        for col_name, list_filter_vals in filter_rows.items():
-            if not isinstance(list_filter_vals, list):
-                raise ValueError(
-                    f"All values in filter_rows dict must be lists; got {type(list_filter_vals)}"
-                )
-            if col_name in data.schema.names:
-                if len(list_filter_vals) == 1:
-                    exprs = (pds.field(col_name) == list_filter_vals[0])
-                else:
-                    exprs = pds.field(col_name).isin(list_filter_vals)
-                filter_exprs.append(exprs)
-            else:
+        for col_name in filter_rows.keys():
+            if col_name not in data.schema.names:
                 warnings.warn(
                     f"Column '{col_name}' from filter_rows dict not found in schema "+
                     f"(filepath = {file_path})"
                 )
-        # Take intersection of all filter expressions
-        if len(filter_exprs) > 1:
-            row_filter = reduce(operator.and_, filter_exprs)
-        elif filter_exprs:
-            row_filter = filter_exprs[0]
-        else:
-            warnings.warn(
-                "User provided filter_rows arg, but no filter expressions could "+
-                "be generated. Check that column names in filter_rows match data schema."
-            )
-    # Filter columns
+    row_filter = get_row_filter_intersection(filter_rows)
+
+    # Get subset of columns to load (if applicable)
     if subset_cols is None:
         subset_cols = data.schema.names
     else:
@@ -104,6 +126,7 @@ def load_parquet_data(
                     f"(filepath = {file_path})"
                 )
         subset_cols = [col for col in subset_cols if col in data.schema.names]
+
     # Scan data in batches to avoid OOM error
     scanner = data.scanner(
         filter=row_filter,
@@ -118,6 +141,7 @@ def load_parquet_data(
         return pyarrow.Table.from_batches(matching_batches)
     else:
         return pyarrow.Table.from_batches([], schema=data.schema)
+
 
 def filter_rows_equal(
     table: pyarrow.Table,

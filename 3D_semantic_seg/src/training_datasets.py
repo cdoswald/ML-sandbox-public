@@ -1,6 +1,7 @@
 """Custom PyTorch and Ray dataset classes."""
 
 import os
+from typing import Iterable, Optional
 
 import pyarrow.parquet as pq
 import pyarrow.compute as pc
@@ -15,48 +16,119 @@ from utils import utils as utl
 class RangeImageDatasetRay:
     """Custom Ray dataset class for LiDAR range image data."""
 
-    def __init__(self, labeled_file_obs: dict[str, list[str]], data_dir: str):
+    def __init__(
+        self,
+        labeled_file_obs: dict[str, list[str]],
+        data_dir: str,
+        return_channels_first: bool = True,
+    ) -> None:
+        """Initialize the Ray dataset wrapper.
+
+        Args:
+            labeled_file_obs: Mapping of file ids to observation ids that have labels.
+            data_dir: Root directory containing Waymo parquet subdirectories.
+            return_channels_first: If True, return images with channels first (C, H, W);
+                otherwise, return images with channels last (H, W, C).
+        """
         self.labeled_file_obs = labeled_file_obs
         self.data_dir = data_dir
+        self.return_channels_first = return_channels_first
+
+    def _load_file(self, row: dict) -> Iterable[dict]:
+        """Load and join LiDAR and segmentation label rows for one file.
+
+        Args:
+            row: A Ray row containing a ``file_id`` key.
+
+        Yields:
+            Joined LiDAR + segmentation records, one per observation id.
+        """
+        file_id = row["file_id"]
+        valid_obs_ids = set(self.labeled_file_obs[file_id])
+
+        lidar_data = utl_prq.load_parquet_data(
+            data_dir=self.data_dir,
+            file_id=file_id,
+            data_subdir="lidar",
+            subset_cols=[
+                "index",
+                "[LiDARComponent].range_image_return1.values",
+                "[LiDARComponent].range_image_return1.shape",
+            ],
+            filter_rows={"index": list(valid_obs_ids), "key.laser_name": [1]},
+        )
+
+        seg_labels_data = utl_prq.load_parquet_data(
+            data_dir=self.data_dir,
+            file_id=file_id,
+            data_subdir="lidar_segmentation",
+            subset_cols=[
+                "index",
+                "[LiDARSegmentationLabelComponent].range_image_return1.values",
+                "[LiDARSegmentationLabelComponent].range_image_return1.shape",
+            ],
+            filter_rows={"index": list(valid_obs_ids), "key.laser_name": [1]},
+        )
+
+        joined_data = lidar_data.join(seg_labels_data, keys="index", how="inner")
+
+        for record in joined_data.to_pylist():
+            yield record
+
+    def _transform_geometry_batch(self, batch: dict) -> dict:
+        """Reshape range-image arrays and optionally move channels before height and width dims.
+
+        Args:
+            batch: Numpy-format batch emitted by Ray Data containing flattened
+                value arrays and corresponding shape arrays.
+
+        Returns:
+            Dictionary with observation ids, reshaped range images, and
+            reshaped segmentation labels.
+        """
+
+        # Extract the whole column arrays from the batch
+        images = batch["[LiDARComponent].range_image_return1.values"]
+        images_shapes = batch["[LiDARComponent].range_image_return1.shape"]
+        labels = batch["[LiDARSegmentationLabelComponent].range_image_return1.values"]
+        labels_shapes = batch[
+            "[LiDARSegmentationLabelComponent].range_image_return1.shape"
+        ]
+
+        for i in range(len(images)):
+            # Reshape lidar image and segmentation labels in place
+            img = images[i].reshape(images_shapes[i])
+            lbl = labels[i].reshape(labels_shapes[i])
+
+            # Swap channels to return [C, H, W] if necessary
+            if self.return_channels_first:
+                img = img.transpose(2, 0, 1)
+                if lbl.ndim == 3 and lbl.shape[2] == 1:
+                    lbl = lbl.transpose(2, 0, 1)
+
+            # Overwrite element in existing array reference to avoid temporary copy
+            images[i] = img
+            labels[i] = lbl
+
+        return {
+            "obs_id": batch["index"],
+            "range_image": images,
+            "segmentation_labels": labels,
+        }
 
     def get_dataset(self) -> ray.data.Dataset:
+        """Build the full Ray dataset pipeline.
+
+        Returns:
+            Ray dataset where each row contains ``obs_id``, ``range_image``,
+            and ``segmentation_labels``.
+        """
         file_ids = list(self.labeled_file_obs.keys())
         base_ds = ray.data.from_items([{"file_id": fid} for fid in file_ids])
 
-        def load_file(ds_row: dict) -> list[dict]:
-            file_id = ds_row["file_id"]
-            valid_obs_ids = set(self.labeled_file_obs[file_id])
-
-            lidar_data = utl_prq.load_parquet_data(
-                data_dir=self.data_dir,
-                file_id=file_id,
-                data_subdir="lidar",
-                subset_cols=[
-                    "index",
-                    "[LiDARComponent].range_image_return1.values",
-                    "[LiDARComponent].range_image_return1.shape",
-                ],
-                filter_rows={"index": list(valid_obs_ids), "key.laser_name": [1]},
-            )
-
-            seg_labels_data = utl_prq.load_parquet_data(
-                data_dir=self.data_dir,
-                file_id=file_id,
-                data_subdir="lidar_segmentation",
-                subset_cols=[
-                    "index",
-                    "[LiDARSegmentationLabelComponent].range_image_return1.values",
-                    "[LiDARSegmentationLabelComponent].range_image_return1.shape",
-                ],
-                filter_rows={"index": list(valid_obs_ids), "key.laser_name": [1]},
-            )
-
-            # TODO: left off here at 10:15pm on 6/4;
-            # need to join lidar_data and seg_labels_data for Ray dataset?
-            # also use yield instead of return?
-
-        final_ds = base_ds.flat_map(load_file)
-        return final_ds
+        return base_ds.flat_map(self._load_file).map_batches(
+            self._transform_geometry_batch, batch_format="numpy"
+        )
 
 
 class RangeImageDatasetTorch(Dataset):
@@ -87,16 +159,17 @@ class RangeImageDatasetTorch(Dataset):
             self.file_obs_tuples.extend([(file_id, obs_id) for obs_id in obs_ids])
 
     def __len__(self) -> int:
+        """Return the number of labeled observations available."""
         return len(self.file_obs_tuples)
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
-        """Get range image and corresponding segmentation labels.
+        """Get a range image tensor and matching segmentation labels.
 
         Args:
-            idx: observation index
+            idx: Observation index in the flattened ``(file_id, obs_id)`` list.
 
         Returns:
-            tuple of PyTorch tensors containing (range_image, range_image_labels)
+            Tuple of tensors ``(range_image, range_image_labels)``.
         """
 
         file_id, obs_id = self.file_obs_tuples[idx]

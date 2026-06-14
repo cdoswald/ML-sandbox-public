@@ -3,6 +3,7 @@
 import os
 from typing import Iterable, Optional
 
+import polars as pl
 import pyarrow.parquet as pq
 import pyarrow.compute as pc
 import ray
@@ -70,9 +71,16 @@ class RangeImageDatasetRay:
             filter_rows={"index": list(valid_obs_ids), "key.laser_name": [1]},
         )
 
-        joined_data = lidar_data.join(seg_labels_data, keys="index", how="inner")
+        # Replace pyarrow join with polars join due to following pyarrow error:
+        # "pyarrow.lib.ArrowInvalid: Data type list<item: float> is not supported 
+        # in join non-key field [LiDARComponent].range_image_return1.values"
+        joined_data = pl.from_arrow(lidar_data).join(
+            pl.from_arrow(seg_labels_data),
+            on="index",
+            how="inner"
+        )
 
-        for record in joined_data.to_pylist():
+        for record in joined_data.iter_rows(named=True):
             yield record
 
     def _transform_geometry_batch(self, batch: dict) -> dict:
@@ -103,31 +111,30 @@ class RangeImageDatasetRay:
             # Swap channels to return [C, H, W] if necessary
             if self.return_channels_first:
                 img = img.transpose(2, 0, 1)
-                if lbl.ndim == 3 and lbl.shape[2] == 1:
-                    lbl = lbl.transpose(2, 0, 1)
+                lbl = lbl.transpose(2, 0, 1)
 
             # Overwrite element in existing array reference to avoid temporary copy
             images[i] = img
             labels[i] = lbl
 
         return {
-            "obs_id": batch["index"],
             "range_image": images,
             "segmentation_labels": labels,
         }
 
-    def get_dataset(self) -> ray.data.Dataset:
+    def get_dataset(self, transform_batch_size: int = 16) -> ray.data.Dataset:
         """Build the full Ray dataset pipeline.
 
         Returns:
-            Ray dataset where each row contains ``obs_id``, ``range_image``,
-            and ``segmentation_labels``.
+            Ray dataset where each row contains ``range_image`` and ``segmentation_labels``.
         """
         file_ids = list(self.labeled_file_obs.keys())
         base_ds = ray.data.from_items([{"file_id": fid} for fid in file_ids])
-
-        return base_ds.flat_map(self._load_file).map_batches(
-            self._transform_geometry_batch, batch_format="numpy"
+        loaded_ds = base_ds.flat_map(self._load_file)
+        return loaded_ds.map_batches(
+            self._transform_geometry_batch,
+            batch_format="numpy",
+            batch_size=transform_batch_size,
         )
 
 

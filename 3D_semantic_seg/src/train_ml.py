@@ -8,6 +8,8 @@ if interactive_mode:
 
 import os                                       #noqa: E402
 import numpy as np                              #noqa: E402
+import ray
+import torch
 import torch.nn as nn
 from torch.optim import Adam, AdamW
 from torch.utils.data import DataLoader
@@ -15,12 +17,13 @@ from torch.utils.tensorboard import SummaryWriter
 
 from config import Config
 from models import BaselineCNN
-from training_datasets import RangeImageDataset
+from training_datasets import RangeImageDatasetRay, RangeImageDatasetTorch
 from utils import utils as utl                  #noqa: E402
 from utils import utils_camera as utl_cam       #noqa: E402
 from utils import utils_constants as utl_cons   #noqa: E402
 from utils import utils_lidar as utl_li         #noqa: E402
 from utils import utils_open3d as utl_o3d       #noqa: E402
+from utils import utils_parquet as utl_prq      #noqa: E402
 
 
 if __name__ == "__main__":
@@ -36,7 +39,7 @@ if __name__ == "__main__":
     # file  have labels)
     labeled_file_obs: dict[str, list[str]] = {}
     for file_id in file_ids:
-        lidar_segment_table_all = utl.load_parquet_data(args.data_dir, file_id, "lidar_segmentation")
+        lidar_segment_table_all = utl_prq.load_parquet_data(args.data_dir, file_id, "lidar_segmentation")
         labeled_obs_ids = lidar_segment_table_all["index"].combine_chunks().to_pylist()
         labeled_file_obs[file_id] = labeled_obs_ids
  
@@ -65,25 +68,41 @@ if __name__ == "__main__":
         f"\n# file ids in Test set: {len(test_file_ids)} / {n_file_ids}"
     )
 
-    # Create PyTorch dataset and dataloaders
     train_file_obs = {k:v for k,v in labeled_file_obs.items() if k in train_file_ids}
     validation_file_obs = {k:v for k,v in labeled_file_obs.items() if k in validation_file_ids}
     test_file_obs = {k:v for k,v in labeled_file_obs.items() if k in test_file_ids}
 
-    train_data = RangeImageDataset(train_file_obs, args.data_dir)
-    validation_data = RangeImageDataset(validation_file_obs, args.data_dir)
-    test_data = RangeImageDataset(test_file_obs, args.data_dir)
+    if ray.is_initialized():
+        ray.shutdown()
+    ray.init(num_cpus=2)
+    train_data = RangeImageDatasetRay(train_file_obs, args.data_dir).get_dataset(transform_batch_size=4) 
+    
+    
+    iterator = train_data.iter_torch_batches(batch_size=4)
+    first_batch = next(iter(iterator))
+    print("Success! Range image batch shape:", first_batch["range_image"].shape)
 
-    n_total_obs = sum([len(x) for x in labeled_file_obs.values()])
-    print(
-        f"\n# obs in Training set: {len(train_data)} / {n_total_obs}"+
-        f"\n# obs in Validation set: {len(validation_data)} / {n_total_obs}" +
-        f"\n# obs in Test set: {len(test_data)} / {n_total_obs}"
-    )
 
-    train_dl = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
-    validation_dl = DataLoader(validation_data, batch_size=args.batch_size, shuffle=True)
-    test_dl = DataLoader(test_data, batch_size=args.batch_size, shuffle=False)
+    train_file_obs
+    ray.data.read_parquet()
+
+    # # Create PyTorch dataset and dataloaders
+    # train_data = RangeImageDataset(train_file_obs, args.data_dir)
+    # validation_data = RangeImageDataset(validation_file_obs, args.data_dir)
+    # test_data = RangeImageDataset(test_file_obs, args.data_dir)
+
+    # train_dl = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
+    # validation_dl = DataLoader(validation_data, batch_size=args.batch_size, shuffle=True)
+    # test_dl = DataLoader(test_data, batch_size=args.batch_size, shuffle=False)
+
+    # n_total_obs = sum([len(x) for x in labeled_file_obs.values()])
+    # print(
+    #     f"\n# obs in Training set: {len(train_data)} / {n_total_obs}"+
+    #     f"\n# obs in Validation set: {len(validation_data)} / {n_total_obs}" +
+    #     f"\n# obs in Test set: {len(test_data)} / {n_total_obs}"
+    # )
+
+
 
     # Create model, optimizer, and loss function
     example_input, example_target = next(iter(train_dl))
@@ -97,7 +116,8 @@ if __name__ == "__main__":
     optimizer = Adam(model.parameters(), lr=args.lr)
     loss_func = nn.CrossEntropyLoss()
 
-    # model(example_input)
+    with torch.no_grad():
+        ex_result = model(example_input)
 
     # Train model
     writer = SummaryWriter("runs/run_001")

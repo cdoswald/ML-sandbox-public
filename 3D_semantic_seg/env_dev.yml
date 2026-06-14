@@ -28,11 +28,13 @@ dependencies:
   - pip
   - polars
   - pyarrow>=24.0.0
+  - pydantic
   - python==3.11
   - python-dateutil
   - pytorch>=2.3.0
   - pytorch-cuda>=11.8
   - ptyprocess
+  - ray
   - ruff
   - setuptools
   - sqlite>=3.45

@@ -5,7 +5,7 @@ import os
 class Config:
     """Configuration parameters"""
 
-    use_gcp: bool = True
+    use_gcp: bool = False
     gcp_data_dir: str = "gs://waymo_open_data_copy/data"
     gcp_project_name: str = "waymo-3d-semseg"
 
@@ -18,6 +18,7 @@ class Config:
     scene_vis_fps: float = 5.0
     scene_vis_vstack_videos: bool = True
 
+    # Model training hyperparams
     max_epochs: int = 2
     batch_size: int = 4
     lr: float = 1e-3

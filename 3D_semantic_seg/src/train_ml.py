@@ -6,6 +6,7 @@ if interactive_mode:
     os.chdir("/workspace/hostfiles/src")
     print(os.getcwd())
 
+from datetime import datetime
 import os                                       #noqa: E402
 import numpy as np                              #noqa: E402
 import ray
@@ -24,6 +25,10 @@ from utils import utils_constants as utl_cons   #noqa: E402
 from utils import utils_lidar as utl_li         #noqa: E402
 from utils import utils_open3d as utl_o3d       #noqa: E402
 from utils import utils_parquet as utl_prq      #noqa: E402
+
+if ray.is_initialized():
+    ray.shutdown()
+ray.init(num_cpus=2)
 
 
 if __name__ == "__main__":
@@ -72,19 +77,52 @@ if __name__ == "__main__":
     validation_file_obs = {k:v for k,v in labeled_file_obs.items() if k in validation_file_ids}
     test_file_obs = {k:v for k,v in labeled_file_obs.items() if k in test_file_ids}
 
-    if ray.is_initialized():
-        ray.shutdown()
-    ray.init(num_cpus=2)
-    train_data = RangeImageDatasetRay(train_file_obs, args.data_dir).get_dataset(transform_batch_size=4) 
+    train_data = RangeImageDatasetRay(train_file_obs, args.data_dir).get_dataset(transform_batch_size=4)
+    validation_data = RangeImageDatasetRay(validation_file_obs, args.data_dir).get_dataset(transform_batch_size=4)
+    test_data = RangeImageDatasetRay(test_file_obs, args.data_dir).get_dataset(transform_batch_size=4)
     
+    # Get example data for setting model input dims
+    train_data_iterator = train_data.iter_torch_batches(batch_size=4)
+    example_data = next(iter(train_data_iterator))
+    example_input, example_target = example_data["range_image"], example_data["segmentation_labels"]
+
+    # Create model, optimizer, and loss function
+    model = BaselineCNN(
+        example_input,
+        n_classes=len(utl_cons.get_semseg_idx_map()),
+        hidden_channels=[128, 256, 512, 1024],
+        avgpool_layers=[(1,5), (1,5), (1,2)],
+        verbose=True
+    )
+    optimizer = Adam(model.parameters(), lr=args.lr)
+    loss_func = nn.CrossEntropyLoss()
+
+    # Test forward pass
+    with torch.no_grad():
+        ex_result = model(example_input)
+
+    # Train model
+    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    writer = SummaryWriter(f"runs/run_{current_time}")
+    for epoch_i in range(args.max_epochs):
+        for batch_j, data in enumerate(train_data_iterator):
+            inputs, targets = data["range_image"], data["segmentation_labels"]
+            
+            # Forward pass
+            outputs = model(inputs)
+            loss = loss_func(outputs, targets)
+            
+            #TODO: targets shape is currently [B, 2, H, W]; check which channel is segmentation label vs instance id
+            
+            
+            optimizer.zero_grad()
+            
+            break
+
+            # writer.add_scalar()
     
-    iterator = train_data.iter_torch_batches(batch_size=4)
-    first_batch = next(iter(iterator))
-    print("Success! Range image batch shape:", first_batch["range_image"].shape)
 
 
-    train_file_obs
-    ray.data.read_parquet()
 
     # # Create PyTorch dataset and dataloaders
     # train_data = RangeImageDataset(train_file_obs, args.data_dir)
@@ -101,31 +139,3 @@ if __name__ == "__main__":
     #     f"\n# obs in Validation set: {len(validation_data)} / {n_total_obs}" +
     #     f"\n# obs in Test set: {len(test_data)} / {n_total_obs}"
     # )
-
-
-
-    # Create model, optimizer, and loss function
-    example_input, example_target = next(iter(train_dl))
-    model = BaselineCNN(
-        example_input,
-        n_classes=len(utl_cons.get_semseg_idx_map()),
-        hidden_channels=[128, 256, 512, 1024],
-        avgpool_layers=[(1,5), (1,5), (1,2)],
-        verbose=True
-    )
-    optimizer = Adam(model.parameters(), lr=args.lr)
-    loss_func = nn.CrossEntropyLoss()
-
-    with torch.no_grad():
-        ex_result = model(example_input)
-
-    # Train model
-    writer = SummaryWriter("runs/run_001")
-    for epoch_i in range(args.max_epochs):
-        for batch_j, (range_image, range_image_labels) in enumerate(train_dl):
-            break
-
-            # writer.add_scalar()
-    
-
-    

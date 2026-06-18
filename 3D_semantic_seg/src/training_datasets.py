@@ -114,8 +114,8 @@ class RangeImageDatasetRay:
                 lbl = lbl.transpose(2, 0, 1)
 
             # Overwrite element in existing array reference to avoid temporary copy
-            images[i] = img
-            labels[i] = lbl
+            images[i] = img.to(torch.float32)
+            labels[i] = lbl.to(torch.int64)
 
         return {
             "range_image": images,

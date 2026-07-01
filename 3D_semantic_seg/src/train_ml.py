@@ -22,6 +22,7 @@ from training_datasets import RangeImageDatasetRay, RangeImageDatasetTorch
 from utils import utils as utl                  #noqa: E402
 from utils import utils_camera as utl_cam       #noqa: E402
 from utils import utils_constants as utl_cons   #noqa: E402
+from utils import utils_gcp as utl_gcp          #noqa: E402
 from utils import utils_lidar as utl_li         #noqa: E402
 from utils import utils_open3d as utl_o3d       #noqa: E402
 from utils import utils_parquet as utl_prq      #noqa: E402
@@ -34,7 +35,13 @@ ray.init(num_cpus=2)
 if __name__ == "__main__":
 
     args = Config()
-    file_ids = utl.get_ids_of_complete_data_files(args.data_dir)
+
+    if args.use_gcp:
+        gcs_client = utl_gcp.connect_to_gcp_storage(args.gcp_project_name)
+        file_ids = utl.get_ids_of_complete_data_files(args.data_dir, gcs_client=gcs_client)
+    else:
+        file_ids = utl.get_ids_of_complete_data_files(args.data_dir)
+    print(f"Total # of file IDs: {len(file_ids)}")
 
     # Get list of observation ids that have 3D semantic segmentation labels in each file
     # (note that each file in the lidar range image data contains multiple timesteps/observations,

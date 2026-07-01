@@ -114,8 +114,8 @@ class RangeImageDatasetRay:
                 lbl = lbl.transpose(2, 0, 1)
 
             # Overwrite element in existing array reference to avoid temporary copy
-            images[i] = img.to(torch.float32)
-            labels[i] = lbl.to(torch.int64)
+            images[i] = torch.tensor(img, dtype=torch.float32)
+            labels[i] = torch.tensor(lbl, dtype=torch.int64)
 
         return {
             "range_image": images,
@@ -237,7 +237,7 @@ class RangeImageDatasetTorch(Dataset):
             .to_numpy(zero_copy_only=False)[0]
         )
         range_image_labels = torch.tensor(
-            range_image_labels.reshape(range_image_labels_shape)
+            range_image_labels.reshape(range_image_labels_shape), dtype=torch.int64
         )
 
         # Permute to return channels first (if applicable)

@@ -72,12 +72,10 @@ class RangeImageDatasetRay:
         )
 
         # Replace pyarrow join with polars join due to following pyarrow error:
-        # "pyarrow.lib.ArrowInvalid: Data type list<item: float> is not supported 
+        # "pyarrow.lib.ArrowInvalid: Data type list<item: float> is not supported
         # in join non-key field [LiDARComponent].range_image_return1.values"
         joined_data = pl.from_arrow(lidar_data).join(
-            pl.from_arrow(seg_labels_data),
-            on="index",
-            how="inner"
+            pl.from_arrow(seg_labels_data), on="index", how="inner"
         )
 
         for record in joined_data.iter_rows(named=True):

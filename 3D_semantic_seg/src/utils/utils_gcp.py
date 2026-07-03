@@ -14,8 +14,7 @@ def connect_to_gcp_storage(project: str) -> storage.Client | None:
 
 
 def connect_to_gcp_bucket(
-    client: storage.Client, 
-    bucket_name: str
+    client: storage.Client, bucket_name: str
 ) -> storage.Bucket | None:
     """Connect to a specific GCP bucket and return the bucket object."""
     try:

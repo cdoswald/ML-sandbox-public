@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import os
 
+
 @dataclass
 class Config:
     """Configuration parameters"""
@@ -26,7 +27,6 @@ class Config:
     validation_share: float = 0.2
     test_share: float = 0.2
 
-
     def __post_init__(self):
         self.data_dir = self.gcp_data_dir if self.use_gcp else self.local_data_dir
 
@@ -35,8 +35,6 @@ class Config:
             os.makedirs(self.data_dir, exist_ok=True)
         os.makedirs(self.videos_dir, exist_ok=True)
         os.makedirs(self.pointcloud_dir, exist_ok=True)
-
-
 
     # Define constants
     # LASER_NAME_MAP = dict(wod.LaserName.Name.items())

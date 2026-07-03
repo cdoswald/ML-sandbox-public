@@ -1,8 +1,8 @@
 """Waymo-provided utility functions for Waymo Open Dataset challenges.
 
 Note that all functions in this module are originally provided by Waymo
-and used without modification. Functions that are based on Waymo utility 
-functions but that have been modified will be stored in utils.py 
+and used without modification. Functions that are based on Waymo utility
+functions but that have been modified will be stored in utils.py
 (with source info).
 """
 

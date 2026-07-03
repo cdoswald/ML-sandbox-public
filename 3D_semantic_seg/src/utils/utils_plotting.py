@@ -1,7 +1,6 @@
 """Plotting utility functions"""
 
 
-
 # import tensorflow
 # import tensorflow.compat.v1 as tf
 # tf.enable_eager_execution()

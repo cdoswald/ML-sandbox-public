@@ -89,7 +89,7 @@ if __name__ == "__main__":
     test_data = RangeImageDatasetRay(test_file_obs, args.data_dir).get_dataset(transform_batch_size=4)
     
     # Get example data for setting model input dims
-    train_data_iterator = train_data.iter_torch_batches(batch_size=4)
+    train_data_iterator = train_data.iter_torch_batches(batch_size=args.batch_size)
     example_data = next(iter(train_data_iterator))
     example_input, example_target = example_data["range_image"], example_data["segmentation_labels"]
 
@@ -111,26 +111,61 @@ if __name__ == "__main__":
     # Train model
     current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     writer = SummaryWriter(f"runs/run_{current_time}")
+    semseg_class_id_idx = {
+        v:k for k,v in utl_cons.get_semseg_image_last_dim_map().items()
+    }.get("CLASS_ID")
+    
     for epoch_i in range(args.max_epochs):
+        training_batch_losses = []
         for batch_j, data in enumerate(train_data_iterator):
-            inputs, targets = data["range_image"], data["segmentation_labels"]
-            
+            inputs = data["range_image"]
+            targets = data["segmentation_labels"][:, semseg_class_id_idx, :, :]
+
+            # Forward pass
+            outputs = model(inputs)
+            loss = loss_func(outputs, targets)            
+
+            # Backward pass
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            # Record batch loss
+            training_batch_losses.append(loss.item())
+
+        # Record epoch loss (average of batch losses)
+        epoch_loss = np.mean(training_batch_losses)
+        writer.add_scalar(
+            tag="Loss/train_epoch",
+            scalar_value=epoch_loss,
+            global_step=epoch_i,
+        )
+    
+    # Validation
+    validation_data_iterator = validation_data.iter_torch_batches(batch_size=args.batch_size)
+    with torch.no_grad():
+        validation_batch_losses = []
+        for batch_j, data in enumerate(validation_data_iterator):
+            inputs = data["range_image"]
+            targets = data["segmentation_labels"][:, semseg_class_id_idx, :, :]
+
             # Forward pass
             outputs = model(inputs)
             loss = loss_func(outputs, targets)
-            
-            #TODO: targets shape is currently [B, 2, H, W]; check which channel is segmentation label vs instance id
-            
-            
-            optimizer.zero_grad()
-            
-            break
+            validation_batch_losses.append(loss.item())
 
-            # writer.add_scalar()
-    
-
+        # Record validation loss (average of batch losses)
+        validation_loss = np.mean(validation_batch_losses)
+        writer.add_scalar(
+            tag="Loss/validation_epoch",
+            scalar_value=validation_loss,
+            global_step=epoch_i,
+        )
 
 
+
+## ARCHIVE
+## --------------------------------------------------------------------
     # # Create PyTorch dataset and dataloaders
     # train_data = RangeImageDataset(train_file_obs, args.data_dir)
     # validation_data = RangeImageDataset(validation_file_obs, args.data_dir)

@@ -3,11 +3,11 @@
 interactive_mode = True
 if interactive_mode:
     import os
-
     os.chdir("/workspace/hostfiles/src")
     print(os.getcwd())
 
 from datetime import datetime
+import logging
 import os  # noqa: E402
 import numpy as np  # noqa: E402
 import ray
@@ -28,14 +28,30 @@ from utils import utils_lidar as utl_li  # noqa: E402
 from utils import utils_open3d as utl_o3d  # noqa: E402
 from utils import utils_parquet as utl_prq  # noqa: E402
 
-if ray.is_initialized():
-    ray.shutdown()
-ray.init(num_cpus=2)
+
 
 
 if __name__ == "__main__":
+
+    # Import config params
     args = Config()
 
+    # Initialize Ray
+    if ray.is_initialized():
+        ray.shutdown()
+    ray.init(num_cpus=args.train_num_cpus)
+
+    # Set up logging
+    logging.basicConfig(
+        level=args.log_level,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler("training.log"),
+        ],
+    )
+
+    # Get file IDs of all complete data files in the data directory (either GCP or local)
     if args.use_gcp:
         gcs_client = utl_gcp.connect_to_gcp_storage(args.gcp_project_name)
         file_ids = utl.get_ids_of_complete_data_files(
@@ -43,7 +59,7 @@ if __name__ == "__main__":
         )
     else:
         file_ids = utl.get_ids_of_complete_data_files(args.data_dir)
-    print(f"Total # of file IDs: {len(file_ids)}")
+    logging.info(f"Total # of file IDs: {len(file_ids)}")
 
     # Get list of observation ids that have 3D semantic segmentation labels in each file
     # (note that each file in the lidar range image data contains multiple timesteps/observations,
@@ -78,7 +94,7 @@ if __name__ == "__main__":
     test_file_ids = np.array(
         list(set(file_ids).difference(train_file_ids).difference(validation_file_ids))
     )
-    print(
+    logging.info(
         f"\n# file ids in Training set: {len(train_file_ids)} / {n_file_ids}"
         + f"\n# file ids in Validation set: {len(validation_file_ids)} / {n_file_ids}"
         + f"\n# file ids in Test set: {len(test_file_ids)} / {n_file_ids}"
@@ -100,8 +116,11 @@ if __name__ == "__main__":
         transform_batch_size=4
     )
 
-    # Get example data for setting model input dims
+    # Create data iterators
     train_data_iterator = train_data.iter_torch_batches(batch_size=args.batch_size)
+    validation_data_iterator = validation_data.iter_torch_batches(batch_size=args.batch_size)
+
+    # Get example data for setting model input dims
     example_data = next(iter(train_data_iterator))
     example_input, example_target = (
         example_data["range_image"],
@@ -130,7 +149,12 @@ if __name__ == "__main__":
         v: k for k, v in utl_cons.get_semseg_image_last_dim_map().items()
     }.get("CLASS_ID")
 
+    lowest_validation_epoch_loss = float("inf")
+    epochs_without_improvement = 0
+
     for epoch_i in range(args.max_epochs):
+        
+        # Training loop
         training_batch_losses = []
         for batch_j, data in enumerate(train_data_iterator):
             inputs = data["range_image"]
@@ -149,36 +173,45 @@ if __name__ == "__main__":
             training_batch_losses.append(loss.item())
 
         # Record epoch loss (average of batch losses)
-        epoch_loss = np.mean(training_batch_losses)
+        train_epoch_loss = np.mean(training_batch_losses)
         writer.add_scalar(
             tag="Loss/train_epoch",
-            scalar_value=epoch_loss,
+            scalar_value=train_epoch_loss,
             global_step=epoch_i,
         )
 
-    # Validation
-    validation_data_iterator = validation_data.iter_torch_batches(
-        batch_size=args.batch_size
-    )
-    with torch.no_grad():
-        validation_batch_losses = []
-        for batch_j, data in enumerate(validation_data_iterator):
-            inputs = data["range_image"]
-            targets = data["segmentation_labels"][:, semseg_class_id_idx, :, :]
+        # Validation loop
+        with torch.no_grad():
+            validation_batch_losses = []
+            for batch_j, data in enumerate(validation_data_iterator):
+                inputs = data["range_image"]
+                targets = data["segmentation_labels"][:, semseg_class_id_idx, :, :]
 
-            # Forward pass
-            outputs = model(inputs)
-            loss = loss_func(outputs, targets)
-            validation_batch_losses.append(loss.item())
+                # Forward pass
+                outputs = model(inputs)
+                loss = loss_func(outputs, targets)
+                validation_batch_losses.append(loss.item())
 
-        # Record validation loss (average of batch losses)
-        validation_loss = np.mean(validation_batch_losses)
-        writer.add_scalar(
-            tag="Loss/validation_epoch",
-            scalar_value=validation_loss,
-            global_step=epoch_i,
-        )
+            # Record validation loss (average of batch losses)
+            validation_epoch_loss = np.mean(validation_batch_losses)
+            writer.add_scalar(
+                tag="Loss/validation_epoch",
+                scalar_value=validation_epoch_loss,
+                global_step=epoch_i,
+            )
 
+            # Check for early stopping
+            if validation_epoch_loss < lowest_validation_epoch_loss:
+                lowest_validation_epoch_loss = validation_epoch_loss
+                epochs_without_improvement = 0
+            else:
+                epochs_without_improvement += 1
+                if epochs_without_improvement >= args.early_stopping_epochs:
+                    logging.info(
+                        f"Early stopping triggered after {epochs_without_improvement} epochs without improvement." +
+                        f"\nLowest validation loss: {lowest_validation_epoch_loss:.4f} at epoch {epoch_i - epochs_without_improvement}"
+                    )
+                    break
 
 ## ARCHIVE
 ## --------------------------------------------------------------------
@@ -192,7 +225,7 @@ if __name__ == "__main__":
 # test_dl = DataLoader(test_data, batch_size=args.batch_size, shuffle=False)
 
 # n_total_obs = sum([len(x) for x in labeled_file_obs.values()])
-# print(
+# logging.info(
 #     f"\n# obs in Training set: {len(train_data)} / {n_total_obs}"+
 #     f"\n# obs in Validation set: {len(validation_data)} / {n_total_obs}" +
 #     f"\n# obs in Test set: {len(test_data)} / {n_total_obs}"

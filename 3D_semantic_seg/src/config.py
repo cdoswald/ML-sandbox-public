@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 import os
 
@@ -17,7 +17,9 @@ class Config:
     gcp_project_name: str = "waymo-3d-semseg"
 
     local_data_dir: str = "/workspace/hostfiles/data"
-    
+
+    data_dir: str = field(init=False)
+
     # Output data directories
     videos_dir: str = "/workspace/hostfiles/videos"
     pointcloud_dir: str = "/workspace/hostfiles/pointclouds"
@@ -39,7 +41,7 @@ class Config:
     validation_share: float = 0.2
     test_share: float = 0.2
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.data_dir = self.gcp_data_dir if self.use_gcp else self.local_data_dir
 
         # Create directories

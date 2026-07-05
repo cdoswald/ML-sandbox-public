@@ -2,6 +2,8 @@
 
 import multiprocessing as mp
 import os  # noqa: E402
+from typing import Any, cast
+
 import h5py  # noqa: E402
 import numpy as np  # noqa: E402
 
@@ -17,7 +19,7 @@ from utils import utils_video as utl_vid  # noqa: E402
 
 def process_scene(
     file_id: str,
-    args_dict: dict,
+    args_dict: dict[str, Any],
 ) -> None:
     """
     Process full labeled scene data for one file_id:
@@ -37,7 +39,7 @@ def process_scene(
     class DummyArgs:
         pass
 
-    args = DummyArgs()
+    args = cast(Any, DummyArgs())
     args.__dict__.update(args_dict)
 
     # Get list of observation ids that have 3D semantic segmentation labels (not all are labeled)

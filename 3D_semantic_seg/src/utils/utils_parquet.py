@@ -39,7 +39,7 @@ def get_parquet_col_names(
 
 
 def get_row_filter_intersection(
-    filter_rows: Dict[str, List[Union[str, int, float]]],
+    filter_rows: Optional[Dict[str, List[Union[str, int, float]]]],
 ) -> Optional[pds.Expression]:
     """Get intersection of multiple row filter expressions for pyarrow dataset scanning.
 

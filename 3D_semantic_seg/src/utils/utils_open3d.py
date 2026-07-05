@@ -19,8 +19,8 @@ def visualize_pointcloud_headless(
     videos_dir: str,
     output_resolution: tuple[int, int] = (1280, 720),
     fps: float = 10.0,
-    camera_zoom: Optional[float] = 0.2,
-    downsample_factor: Optional[tuple[int, int]] = (1, 1),
+    camera_zoom: float = 0.2,
+    downsample_factor: tuple[int, int] = (1, 1),
 ) -> None:
     """Render pointcloud sequence from saved npz file in headless environment
     (e.g., Docker container). Rendered image will only be saved to .mp4 file and
@@ -71,8 +71,8 @@ def visualize_pointcloud_headless(
 
     # Display data stream
     print("[6/6] Starting frame processing loop...")
-    first_pass = True
-    frame_count = 0
+    first_pass: bool = True
+    frame_count: int = 0
     for obs_id in sorted(data.keys()):
         points = data[obs_id][:]
 
@@ -146,10 +146,10 @@ def visualize_pointcloud(
     pointcloud_dir: str,
     output_resolution: tuple[int, int] = (1280, 720),
     fps: float = 10.0,
-    camera_zoom: Optional[float] = 0.2,
+    camera_zoom: float = 0.2,
     save_video: bool = False,
     videos_dir: Optional[str] = None,
-    downsample_factor: Optional[tuple[int, int]] = (1, 1),
+    downsample_factor: tuple[int, int] = (1, 1),
 ) -> None:
     """Render and display pointcloud sequence from saved npz file.
 
@@ -189,7 +189,8 @@ def visualize_pointcloud(
     data = h5py.File(os.path.join(pointcloud_dir, pointcloud_file), "r")
 
     # Display data stream
-    first_pass = True
+    first_pass: bool = True
+    frame_count: int = 0
     for obs_id in sorted(data.keys()):
         points = data[obs_id][:]
 
@@ -250,8 +251,10 @@ def visualize_pointcloud(
             img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
             # Write frame to video
+            assert video_writer is not None
             video_writer.write(img_bgr)
 
+        frame_count += 1
         time.sleep(1 / fps)
 
     # Clean up

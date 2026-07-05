@@ -1,7 +1,7 @@
 """Camera utility functions"""
 
 import os
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union, cast
 
 import cv2
 import matplotlib.pyplot as plt
@@ -268,6 +268,9 @@ def resize_image_with_fixed_aspect_ratio(
     pad_left = (target_width - new_w) // 2
     pad_right = target_width - new_w - pad_left
     padding = (pad_top, pad_bottom, pad_left, pad_right)
-    return cv2.copyMakeBorder(
-        resized_image, *padding, borderType=cv2.BORDER_CONSTANT, value=pad_color
+    return cast(
+        np.ndarray,
+        cv2.copyMakeBorder(
+            resized_image, *padding, borderType=cv2.BORDER_CONSTANT, value=pad_color
+        ),
     )

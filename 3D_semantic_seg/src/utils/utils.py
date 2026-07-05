@@ -1,8 +1,7 @@
 """General utility functions"""
 
 import os
-from typing import Dict, List, Optional, Union
-import warnings
+from collections.abc import Callable
 
 from google.cloud import storage as gcs
 
@@ -13,7 +12,7 @@ from google.cloud import storage as gcs
 # from waymo_open_dataset import dataset_pb2 as wod
 
 
-def _gcs_listdir(gcs_path: str, client=None) -> List[str]:
+def _gcs_listdir(gcs_path: str, client: gcs.Client | None = None) -> list[str]:
     """List immediate subdirectory/file names under a GCS path."""
     # Parse bucket and prefix from gs://bucket/prefix
     path = gcs_path[len("gs://") :]
@@ -28,19 +27,27 @@ def _gcs_listdir(gcs_path: str, client=None) -> List[str]:
     return names + prefixes
 
 
-def get_ids_of_complete_data_files(data_dir: str, gcs_client=None) -> list[str]:
+def get_ids_of_complete_data_files(
+    data_dir: str, gcs_client: gcs.Client | None = None
+) -> list[str]:
     """Get file ids for which data are available in each data subdirectory."""
     file_ids = set()
+    listdir: Callable[[str], list[str]]
+    join: Callable[[str, str], str]
     if data_dir.startswith("gs://"):
 
-        def listdir(path):
+        def listdir(path: str) -> list[str]:
             return _gcs_listdir(path, client=gcs_client)
 
-        def join(base, sub):
+        def join(base: str, sub: str) -> str:
             return base.rstrip("/") + "/" + sub
     else:
-        listdir = os.listdir
-        join = os.path.join
+
+        def listdir(path: str) -> list[str]:
+            return list(os.listdir(path))
+
+        def join(base: str, sub: str) -> str:
+            return os.path.join(base, sub)
 
     for i, data_subdir in enumerate(listdir(data_dir)):
         data_subdir_ids = set(

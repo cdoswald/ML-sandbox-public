@@ -3,36 +3,33 @@
 interactive_mode = True
 if interactive_mode:
     import os
+
     os.chdir("/workspace/hostfiles/src")
     print(os.getcwd())
 
-from datetime import datetime
-import logging
+from datetime import datetime  # noqa: E402
+import logging  # noqa: E402
 import os  # noqa: E402
 import numpy as np  # noqa: E402
-import ray
-import torch
-import torch.nn as nn
-from torch.optim import Adam, AdamW
-from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
+import ray  # noqa: E402
+import torch  # noqa: E402
+import torch.nn as nn  # noqa: E402
+from torch.optim import Adam  # noqa: E402
+from torch.utils.tensorboard import SummaryWriter  # noqa: E402
 
-from config import Config
-from models import BaselineCNN
-from training_datasets import RangeImageDatasetRay, RangeImageDatasetTorch
+from config import Config  # noqa: E402
+from models import BaselineCNN  # noqa: E402
+from training_datasets import RangeImageDatasetRay  # noqa: E402
 from utils import utils as utl  # noqa: E402
-from utils import utils_camera as utl_cam  # noqa: E402
 from utils import utils_constants as utl_cons  # noqa: E402
 from utils import utils_gcp as utl_gcp  # noqa: E402
-from utils import utils_lidar as utl_li  # noqa: E402
-from utils import utils_open3d as utl_o3d  # noqa: E402
 from utils import utils_parquet as utl_prq  # noqa: E402
 
-
+# from torch.utils.data import DataLoader # noqa: E402
+# from training_datasets import RangeImageDatasetTorch # noqa: E402
 
 
 if __name__ == "__main__":
-
     # Import config params
     args = Config()
 
@@ -118,7 +115,9 @@ if __name__ == "__main__":
 
     # Create data iterators
     train_data_iterator = train_data.iter_torch_batches(batch_size=args.batch_size)
-    validation_data_iterator = validation_data.iter_torch_batches(batch_size=args.batch_size)
+    validation_data_iterator = validation_data.iter_torch_batches(
+        batch_size=args.batch_size
+    )
 
     # Get example data for setting model input dims
     example_data = next(iter(train_data_iterator))
@@ -153,7 +152,6 @@ if __name__ == "__main__":
     epochs_without_improvement = 0
 
     for epoch_i in range(args.max_epochs):
-        
         # Training loop
         training_batch_losses = []
         for batch_j, data in enumerate(train_data_iterator):
@@ -208,8 +206,8 @@ if __name__ == "__main__":
                 epochs_without_improvement += 1
                 if epochs_without_improvement >= args.early_stopping_epochs:
                     logging.info(
-                        f"Early stopping triggered after {epochs_without_improvement} epochs without improvement." +
-                        f"\nLowest validation loss: {lowest_validation_epoch_loss:.4f} at epoch {epoch_i - epochs_without_improvement}"
+                        f"Early stopping triggered after {epochs_without_improvement} epochs without improvement."
+                        + f"\nLowest validation loss: {lowest_validation_epoch_loss:.4f} at epoch {epoch_i - epochs_without_improvement}"
                     )
                     break
 

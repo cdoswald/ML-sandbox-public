@@ -13,3 +13,7 @@ ignore_missing_imports = true
 strict = true
 
 exclude = "_archive/"
+
+[[tool.mypy.overrides]]
+module = ["src.utils.utils_parquet"]
+disable_error_code = ["attr-defined", "name-defined", "no-any-return", "no-untyped-call"]

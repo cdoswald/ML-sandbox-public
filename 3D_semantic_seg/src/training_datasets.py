@@ -1,17 +1,13 @@
 """Custom PyTorch and Ray dataset classes."""
 
-import os
-from typing import Iterable, Optional
+from typing import Any, Iterator, cast
 
 import polars as pl
-import pyarrow.parquet as pq
-import pyarrow.compute as pc
 import ray
 import torch
 from torch.utils.data import Dataset
 
 from utils import utils_parquet as utl_prq
-from utils import utils as utl
 
 
 class RangeImageDatasetRay:
@@ -35,7 +31,7 @@ class RangeImageDatasetRay:
         self.data_dir = data_dir
         self.return_channels_first = return_channels_first
 
-    def _load_file(self, row: dict) -> Iterable[dict]:
+    def _load_file(self, row: dict[str, Any]) -> Iterator[dict[str, Any]]:
         """Load and join LiDAR and segmentation label rows for one file.
 
         Args:
@@ -74,14 +70,14 @@ class RangeImageDatasetRay:
         # Replace pyarrow join with polars join due to following pyarrow error:
         # "pyarrow.lib.ArrowInvalid: Data type list<item: float> is not supported
         # in join non-key field [LiDARComponent].range_image_return1.values"
-        joined_data = pl.from_arrow(lidar_data).join(
-            pl.from_arrow(seg_labels_data), on="index", how="inner"
+        joined_data = cast(pl.DataFrame, pl.from_arrow(lidar_data)).join(
+            cast(pl.DataFrame, pl.from_arrow(seg_labels_data)), on="index", how="inner"
         )
 
         for record in joined_data.iter_rows(named=True):
             yield record
 
-    def _transform_geometry_batch(self, batch: dict) -> dict:
+    def _transform_geometry_batch(self, batch: dict[str, Any]) -> dict[str, Any]:
         """Reshape range-image arrays and optionally move channels before height and width dims.
 
         Args:
@@ -136,7 +132,7 @@ class RangeImageDatasetRay:
         )
 
 
-class RangeImageDatasetTorch(Dataset):
+class RangeImageDatasetTorch(Dataset[tuple[torch.Tensor, torch.Tensor]]):
     """Custom PyTorch dataset class for LiDAR range image data."""
 
     def __init__(

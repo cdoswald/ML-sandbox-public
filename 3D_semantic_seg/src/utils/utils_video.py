@@ -64,6 +64,6 @@ def vstack_videos(
         combined = ffmpeg.filter([video1, video2], "vstack")
         output = ffmpeg.output(combined, output_file)
         ffmpeg.run(output, overwrite_output=True)
-    except ffmpeg.Error as e:
+    except ffmpeg.Error:
         print(f"Error stitching videos '{video_file_1}' and '{video_file_2}'")
         raise

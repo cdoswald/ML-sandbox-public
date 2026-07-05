@@ -1,6 +1,7 @@
 """PyTorch models for Waymo Open Dataset 3D Semantic Segmentation challenge."""
 
 import math
+from typing import cast
 
 import torch
 import torch.nn as nn
@@ -143,6 +144,6 @@ class BaselineCNN(nn.Module):
             print(f"Encoder: {self.encoder}")
             print(f"Decoder: {self.decoder}")
 
-    def forward(self, x: torch.tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         encoded_x = self.encoder(x)
-        return self.decoder(encoded_x)
+        return cast(torch.Tensor, self.decoder(encoded_x))

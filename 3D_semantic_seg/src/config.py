@@ -23,6 +23,7 @@ class Config:
     # Output data directories
     videos_dir: str = "/workspace/hostfiles/videos"
     pointcloud_dir: str = "/workspace/hostfiles/pointclouds"
+    models_dir: str = "/workspace/hostfiles/models"
 
     # Scene visualization
     scene_vis_n_workers: int = 4
@@ -42,14 +43,21 @@ class Config:
     test_share: float = 0.2
 
     def __post_init__(self) -> None:
+
+        # Set data directory
         self.data_dir = self.gcp_data_dir if self.use_gcp else self.local_data_dir
 
         # Create directories
+        create_dirs = [
+            self.log_dir,
+            self.videos_dir,
+            self.pointcloud_dir,
+            self.models_dir,
+        ]
         if not self.use_gcp:
-            os.makedirs(self.data_dir, exist_ok=True)
-        os.makedirs(self.log_dir, exist_ok=True)
-        os.makedirs(self.videos_dir, exist_ok=True)
-        os.makedirs(self.pointcloud_dir, exist_ok=True)
+            create_dirs.append(self.data_dir)
+        for dir_path in create_dirs:
+            os.makedirs(dir_path, exist_ok=True)
 
     # Define constants
     # LASER_NAME_MAP = dict(wod.LaserName.Name.items())

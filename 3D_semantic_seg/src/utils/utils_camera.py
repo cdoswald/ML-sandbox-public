@@ -1,7 +1,7 @@
 """Camera utility functions"""
 
 import os
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union, cast
 
 import cv2
 import matplotlib.pyplot as plt
@@ -29,7 +29,9 @@ def extract_camera_images(
     Returns
         frames: list of image frames stored as numpy ndarrays
     """
-    camera_image_table = utl_prq.filter_rows_equal(camera_image_table, {"key.camera_name":[camera_id]})
+    camera_image_table = utl_prq.filter_rows_equal(
+        camera_image_table, {"key.camera_name": [camera_id]}
+    )
     if len(camera_image_table) < 1:
         raise ValueError(
             f"Camera image table does not contain any observations with camera_id={camera_id}"
@@ -40,7 +42,9 @@ def extract_camera_images(
     for i in range(len(camera_image_table)):
         obs_id = camera_image_table["index"][i].as_py()
         # Convert camera image from bytes to numpy array
-        obs_camera_image_bytes = camera_image_table["[CameraImageComponent].image"][i].as_py()
+        obs_camera_image_bytes = camera_image_table["[CameraImageComponent].image"][
+            i
+        ].as_py()
         obs_camera_image = cv2.imdecode(
             np.frombuffer(obs_camera_image_bytes, dtype=np.uint8),
             cv2.IMREAD_COLOR,
@@ -49,20 +53,23 @@ def extract_camera_images(
         # Draw object bounding boxes (if applicable)
         if camera_box_table is not None:
             obs_camera_boxes = utl_prq.filter_rows_equal(
-                camera_box_table, {"index":obs_id, "key.camera_name":[camera_id]}
+                camera_box_table, {"index": obs_id, "key.camera_name": [camera_id]}
             )
             for j in range(len(obs_camera_boxes)):
-                center_x = obs_camera_boxes["[CameraBoxComponent].box.center.x"][j].as_py()
-                center_y = obs_camera_boxes["[CameraBoxComponent].box.center.y"][j].as_py()
+                center_x = obs_camera_boxes["[CameraBoxComponent].box.center.x"][
+                    j
+                ].as_py()
+                center_y = obs_camera_boxes["[CameraBoxComponent].box.center.y"][
+                    j
+                ].as_py()
                 size_x = obs_camera_boxes["[CameraBoxComponent].box.size.x"][j].as_py()
                 size_y = obs_camera_boxes["[CameraBoxComponent].box.size.y"][j].as_py()
-                x1 = int(center_x - size_x/2)
-                y1 = int(center_y - size_y/2)
-                x2 = int(center_x + size_x/2)
-                y2 = int(center_y + size_y/2)
+                x1 = int(center_x - size_x / 2)
+                y1 = int(center_y - size_y / 2)
+                x2 = int(center_x + size_x / 2)
+                y2 = int(center_y + size_y / 2)
                 cv2.rectangle(
-                    obs_camera_image, (x1, y1), (x2, y2),
-                    color=(0, 0, 255), thickness=2
+                    obs_camera_image, (x1, y1), (x2, y2), color=(0, 0, 255), thickness=2
                 )
         # Append to frames list
         frames.append(obs_camera_image)
@@ -80,7 +87,7 @@ def orient_camera_ids(camera_ids: List[int]) -> List[int]:
             vehicle viewpoint
     """
     ordered_camera_ids = []
-    camera_name_idx_map = {v:k for k,v in utl_con.get_camera_idx_map().items()}
+    camera_name_idx_map = {v: k for k, v in utl_con.get_camera_idx_map().items()}
     camera_name_order = utl_con.get_veh_view_camera_name_order()
     for camera_name in camera_name_order:
         camera_idx = camera_name_idx_map.get(camera_name)
@@ -95,21 +102,21 @@ def display_frames(
 ) -> None:
     """Display camera image frame(s). For single-camera display, 'frames'
     should be a sequence of numpy ndarrays. For multicamera display,
-    'frames' should be a dictionary mapping camera ID to sequence of 
+    'frames' should be a dictionary mapping camera ID to sequence of
     numpy ndarrays.
 
     If multicamera display, then images will be reordered by default
     to match the viewpoint of the vehicle (e.g., left side camera will be
     the furthest left image, front camera will be the middle image, etc.).
-    To display the images according to the original order of camera IDs 
+    To display the images according to the original order of camera IDs
     in the 'frames' dictionary, set 'orient_veh_view' arg to False.
 
     Args:
-        frames: for single camera, sequence of images stored as numpy 
+        frames: for single camera, sequence of images stored as numpy
             ndarray(s); for multicamera, dict mapping camera ID to sequence
             of images stored as numpy ndarray(s)
-        orient_veh_view: bool indicator to display images from vehicle 
-            perspective (default = True); only applies if frames is dict for 
+        orient_veh_view: bool indicator to display images from vehicle
+            perspective (default = True); only applies if frames is dict for
             multicamera display
 
     Returns:
@@ -123,7 +130,7 @@ def display_frames(
         n_cameras = len(camera_ids)
         n_frames = max([len(x) for x in frames.values()])
         for i in range(n_frames):
-            fig, axes = plt.subplots(1, n_cameras, figsize=(8,6))
+            fig, axes = plt.subplots(1, n_cameras, figsize=(8, 6))
             fig.subplots_adjust(wspace=0.03, hspace=0)
             for j, camera_id in enumerate(camera_ids):
                 try:
@@ -149,27 +156,27 @@ def write_frames_to_video_file(
     fps: float = 10.0,
     orient_veh_view: bool = True,
 ) -> None:
-    """Write camera image frame(s) to mp4 video. For single-camera display, 
+    """Write camera image frame(s) to mp4 video. For single-camera display,
     'frames' should be a sequence of numpy ndarrays. For multicamera display,
-    'frames' should be a dictionary mapping camera ID to sequence of 
+    'frames' should be a dictionary mapping camera ID to sequence of
     numpy ndarrays.
 
     If multicamera display, then images will be reordered by default
     to match the viewpoint of the vehicle (e.g., left side camera will be
     the furthest left image, front camera will be the middle image, etc.).
-    To display the images according to the original order of camera IDs 
+    To display the images according to the original order of camera IDs
     in the 'frames' dictionary, set 'orient_veh_view' arg to False.
-    
+
     Args:
-        frames: for single camera, sequence of images stored as numpy 
+        frames: for single camera, sequence of images stored as numpy
             ndarray(s); for multicamera, dict mapping camera ID to sequence
             of images stored as numpy ndarray(s)
         dir_name: string directory name for mp4 video file
         file_name: string file name for mp4 video file (excluding .mp4 suffix)
         output_resolution: video resolution formatted as (output_width, output_height)
         fps: frames per second for mp4 video file
-        orient_veh_view: bool indicator to display images from vehicle 
-            perspective (default = True); only applies if frames is dict for 
+        orient_veh_view: bool indicator to display images from vehicle
+            perspective (default = True); only applies if frames is dict for
             multicamera display
 
     Returns:
@@ -261,9 +268,9 @@ def resize_image_with_fixed_aspect_ratio(
     pad_left = (target_width - new_w) // 2
     pad_right = target_width - new_w - pad_left
     padding = (pad_top, pad_bottom, pad_left, pad_right)
-    return cv2.copyMakeBorder(
-        resized_image,
-        *padding,
-        borderType=cv2.BORDER_CONSTANT,
-        value=pad_color
+    return cast(
+        np.ndarray,
+        cv2.copyMakeBorder(
+            resized_image, *padding, borderType=cv2.BORDER_CONSTANT, value=pad_color
+        ),
     )

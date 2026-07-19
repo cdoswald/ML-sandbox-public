@@ -19,8 +19,8 @@ def visualize_pointcloud_headless(
     videos_dir: str,
     output_resolution: tuple[int, int] = (1280, 720),
     fps: float = 10.0,
-    camera_zoom: Optional[float] = 0.2,
-    downsample_factor: Optional[tuple[int, int]] = (1, 1),
+    camera_zoom: float = 0.2,
+    downsample_factor: tuple[int, int] = (1, 1),
 ) -> None:
     """Render pointcloud sequence from saved npz file in headless environment
     (e.g., Docker container). Rendered image will only be saved to .mp4 file and
@@ -66,21 +66,23 @@ def visualize_pointcloud_headless(
 
     # Load and extract data
     print("[5/6] Loading HDF5 file...")
-    data = h5py.File(os.path.join(pointcloud_dir, pointcloud_file), 'r')
+    data = h5py.File(os.path.join(pointcloud_dir, pointcloud_file), "r")
     print(f"Loaded {len(data.keys())} frames")
 
     # Display data stream
     print("[6/6] Starting frame processing loop...")
-    first_pass = True
-    frame_count = 0
+    first_pass: bool = True
+    frame_count: int = 0
     for obs_id in sorted(data.keys()):
         points = data[obs_id][:]
-        
+
         # Downsample (if applicable; reduces memory requirement)
         if downsample_factor != (1, 1):
-            points = points[::downsample_factor[0], ::downsample_factor[1], :]
+            points = points[:: downsample_factor[0], :: downsample_factor[1], :]
 
-        print(f"Frame {frame_count}: shape={points.shape}, size={points.nbytes/(1024**2):.2f} MB")
+        print(
+            f"Frame {frame_count}: shape={points.shape}, size={points.nbytes / (1024**2):.2f} MB"
+        )
 
         # Add (x,y,z) coords
         pcd = o3d.geometry.PointCloud()
@@ -97,7 +99,7 @@ def visualize_pointcloud_headless(
             color_dict = utl_con.get_semseg_rgb_map()
             colors = np.array([color_dict[label] for label in points_classes])
             pcd.colors = o3d.utility.Vector3dVector(colors)
-            
+
             # Clean up intermediate arrays
             del points_semseg, points_classes, colors
 
@@ -124,10 +126,10 @@ def visualize_pointcloud_headless(
 
         # Write frame to video
         video_writer.write(img_bgr)
-        
+
         # Clean up memory after each frame
         del points, points_xyz, pcd, img, img_bgr
-        
+
         # Force garbage collection every 5 frames
         frame_count += 1
         if frame_count % 5 == 0:
@@ -144,10 +146,10 @@ def visualize_pointcloud(
     pointcloud_dir: str,
     output_resolution: tuple[int, int] = (1280, 720),
     fps: float = 10.0,
-    camera_zoom: Optional[float] = 0.2,
+    camera_zoom: float = 0.2,
     save_video: bool = False,
     videos_dir: Optional[str] = None,
-    downsample_factor: Optional[tuple[int, int]] = (1, 1),
+    downsample_factor: tuple[int, int] = (1, 1),
 ) -> None:
     """Render and display pointcloud sequence from saved npz file.
 
@@ -184,18 +186,21 @@ def visualize_pointcloud(
     pcd = o3d.geometry.PointCloud()
 
     # Load and extract data
-    data = h5py.File(os.path.join(pointcloud_dir, pointcloud_file), 'r')
+    data = h5py.File(os.path.join(pointcloud_dir, pointcloud_file), "r")
 
     # Display data stream
-    first_pass = True
+    first_pass: bool = True
+    frame_count: int = 0
     for obs_id in sorted(data.keys()):
         points = data[obs_id][:]
 
         # Downsample (if applicable; reduces memory requirement)
         if downsample_factor != (1, 1):
-            points = points[::downsample_factor[0], ::downsample_factor[1], :]
+            points = points[:: downsample_factor[0], :: downsample_factor[1], :]
 
-        print(f"Frame {frame_count}: shape={points.shape}, size={points.nbytes/(1024**2):.2f} MB")
+        print(
+            f"Frame {frame_count}: shape={points.shape}, size={points.nbytes / (1024**2):.2f} MB"
+        )
 
         # Add (x,y,z) coords
         points_xyz = points[..., :3].reshape((-1, 3))
@@ -240,16 +245,17 @@ def visualize_pointcloud(
         vis.update_renderer()
 
         if save_video:
-
             # Capture frame and convert to BGR for OpenCV output
             img = vis.capture_screen_float_buffer(do_render=False)
             img = (np.asarray(img) * 255).astype(np.uint8)
             img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
             # Write frame to video
+            assert video_writer is not None
             video_writer.write(img_bgr)
 
-        time.sleep(1/fps)
+        frame_count += 1
+        time.sleep(1 / fps)
 
     # Clean up
     data.close()

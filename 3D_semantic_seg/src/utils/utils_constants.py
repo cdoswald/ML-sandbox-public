@@ -19,8 +19,9 @@ def get_laser_idx_map() -> Dict[int, str]:
         2: "FRONT",
         3: "SIDE_LEFT",
         4: "SIDE_RIGHT",
-        5: "REAR"
+        5: "REAR",
     }
+
 
 def get_camera_idx_map() -> Dict[int, str]:
     """Get dictionary mapping camera index to camera name."""
@@ -39,8 +40,9 @@ def get_camera_idx_map() -> Dict[int, str]:
         5: "SIDE_RIGHT",
         6: "REAR_LEFT",
         7: "REAR",
-        8: "REAR_RIGHT"
+        8: "REAR_RIGHT",
     }
+
 
 def get_veh_view_camera_name_order() -> List[str]:
     """Get list of camera names ordered to reflect vehicle viewpoint."""
@@ -55,6 +57,7 @@ def get_veh_view_camera_name_order() -> List[str]:
         "REAR",
     ]
 
+
 def get_range_image_last_dim_map() -> Dict[int, str]:
     """Get dictionary mapping last dim of range image to signal type
     (e.g., distance, intensity, elongation)."""
@@ -64,16 +67,18 @@ def get_range_image_last_dim_map() -> Dict[int, str]:
         2: "ELONGATION",
     }
 
+
 def get_semseg_image_last_dim_map() -> Dict[int, str]:
-    """Get dictionary mapping last dim of segmentation image to type 
+    """Get dictionary mapping last dim of segmentation image to type
     (e.g., instance, class)."""
     return {
         0: "INSTANCE_ID",
         1: "CLASS_ID",
     }
 
+
 def get_semseg_idx_map() -> Dict[int, Dict[str, str]]:
-    """Get dictionary mapping 3D semantic segmentation index to label 
+    """Get dictionary mapping 3D semantic segmentation index to label
     name and color."""
     return {
         0: {"name": "Undefined", "color": "darkgray"},
@@ -81,7 +86,7 @@ def get_semseg_idx_map() -> Dict[int, Dict[str, str]]:
         2: {"name": "Truck", "color": "darkturquoise"},
         3: {"name": "Bus", "color": "cadetblue"},
         4: {"name": "Other Vehicle", "color": "mediumpurple"},
-        5: {"name": "Motorcyclist", "color": "red"}, # Need confirmation
+        5: {"name": "Motorcyclist", "color": "red"},  # Need confirmation
         6: {"name": "Bicyclist", "color": "lime"},
         7: {"name": "Pedestrian", "color": "magenta"},
         8: {"name": "Sign", "color": "lemonchiffon"},
@@ -89,7 +94,7 @@ def get_semseg_idx_map() -> Dict[int, Dict[str, str]]:
         10: {"name": "Pole", "color": "darkslategrey"},
         11: {"name": "Construction Cone", "color": "orange"},
         12: {"name": "Bicycle", "color": "palegreen"},
-        13: {"name": "Motorcycle", "color": "red"}, # Need confirmation
+        13: {"name": "Motorcycle", "color": "red"},  # Need confirmation
         14: {"name": "Building", "color": "burlywood"},
         15: {"name": "Vegetation", "color": "forestgreen"},
         16: {"name": "Tree Trunk", "color": "sienna"},
@@ -101,9 +106,8 @@ def get_semseg_idx_map() -> Dict[int, Dict[str, str]]:
         22: {"name": "Sidewalk", "color": "gainsboro"},
     }
 
+
 def get_semseg_rgb_map() -> Dict[int, Tuple[float, float, float]]:
     """Get dictionary mapping 3D semantic segmentation index to RGB value."""
     semseg_map = get_semseg_idx_map()
-    return {
-        k:mcolors.to_rgb(v["color"]) for k,v in semseg_map.items()
-    }
+    return {k: mcolors.to_rgb(v["color"]) for k, v in semseg_map.items()}

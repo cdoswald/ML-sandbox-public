@@ -116,7 +116,11 @@ class RangeImageDatasetRay:
             "segmentation_labels": labels,
         }
 
-    def get_dataset(self, transform_batch_size: int = 16) -> ray.data.Dataset:
+    def get_dataset(
+        self,
+        transform_batch_size: int = 16,
+        approx_memory_per_file_gb: int = 4,
+    ) -> ray.data.Dataset:
         """Build the full Ray dataset pipeline.
 
         Returns:
@@ -124,7 +128,10 @@ class RangeImageDatasetRay:
         """
         file_ids = list(self.labeled_file_obs.keys())
         base_ds = ray.data.from_items([{"file_id": fid} for fid in file_ids])
-        loaded_ds = base_ds.flat_map(self._load_file)
+        loaded_ds = base_ds.flat_map(
+            self._load_file,
+            memory=approx_memory_per_file_gb * (1024**3),
+        )
         return loaded_ds.map_batches(
             self._transform_geometry_batch,
             batch_format="numpy",

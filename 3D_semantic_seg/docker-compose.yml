@@ -19,6 +19,7 @@ services:
       QT_X11_NO_MITSHM: 1
       EGL_PLATFORM: surfaceless
     tty: true
+    shm_size: '32gb'
     # deploy:
     #   resources:
     #     limits:

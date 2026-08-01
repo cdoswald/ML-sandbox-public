@@ -7,6 +7,7 @@ dependencies:
   - google-cloud-storage
   - gymnasium
   - h5py
+  - imageio
   - ipykernel
   - ipython
   - matplotlib

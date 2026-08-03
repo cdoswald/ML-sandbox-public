@@ -1,0 +1,26 @@
+services:
+  slam-env:
+    user: root
+    build: 
+      context: .
+      dockerfile: Dockerfile.dev
+    image: slam-image
+    container_name: slam-container
+    ports:
+      - "8001:8001"
+      - "6006:6006"
+    volumes:
+      - .:/workspace/hostfiles
+      # - /tmp/.X11-unix:/tmp/.X11-unix
+      - /tmp/runtime-mambauser:/tmp/runtime-mambauser
+    environment:
+      # DISPLAY: ${DISPLAY}
+      XDG_RUNTIME_DIR: /tmp/runtime-mambauser
+      QT_X11_NO_MITSHM: 1
+      EGL_PLATFORM: surfaceless
+    tty: true
+    # shm_size: '32gb'
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 12G

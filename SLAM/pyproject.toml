@@ -1,0 +1,9 @@
+[tool.ruff]
+exclude = ["**/_archive/*"]
+lint.ignore = ["EXE002"]
+line-length = 88
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

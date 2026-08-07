@@ -18,6 +18,8 @@ services:
       XDG_RUNTIME_DIR: /tmp/runtime-mambauser
       QT_X11_NO_MITSHM: 1
       EGL_PLATFORM: surfaceless
+    devices:
+      - "/dev/video0:/dev/video0"
     tty: true
     # shm_size: '32gb'
     # deploy:

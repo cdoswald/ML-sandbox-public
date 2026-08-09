@@ -2,7 +2,7 @@
 
 ## Setup
 
-### Linux (with Docker)
+### Linux + Docker
 
 1. Find the available video devices: `ls -al /dev/video*`
 
@@ -10,9 +10,9 @@
 
 3. Mount the video feeds in docker-compose file under `<service>.devices`
 
-4. Test video streaming with Video4Linux2: `v4l2-ctl --verbose --stream-mmap --stream-count=100 --stream-to=frame.raw`
+4. Test video streaming with Video4Linux2: `v4l2-ctl --verbose --device="/dev/video<#>" --stream-mmap --stream-count=100 --stream-to=frame.raw`
 
-### Windows (WSL2 + Docker)
+### WSL2 + Docker
 
 Docker containers running via WSL2 do not have direct access to USB devices
 connected to the Windows host by default. To make a USB device available inside

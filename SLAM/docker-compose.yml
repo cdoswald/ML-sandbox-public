@@ -20,6 +20,7 @@ services:
       EGL_PLATFORM: surfaceless
     devices:
       - "/dev/video0:/dev/video0"
+      - "/dev/video2:/dev/video2"
     tty: true
     # shm_size: '32gb'
     # deploy:

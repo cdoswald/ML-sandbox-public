@@ -2,7 +2,17 @@
 
 ## Setup
 
-### Sharing locally connected USB devices with Docker containers in WSL2
+### Linux (with Docker)
+
+1. Find the available video devices: `ls -al /dev/video*`
+
+2. Identify video feed vs control nodes: `udevadm info --query=property --name=/dev/video<#>` (video feed will have `ID_V4L_CAPABILITIES=:capture:`)
+
+3. Mount the video feeds in docker-compose file under `<service>.devices`
+
+4. Test video streaming with Video4Linux2: `v4l2-ctl --verbose --stream-mmap --stream-count=100 --stream-to=frame.raw`
+
+### Windows (WSL2 + Docker)
 
 Docker containers running via WSL2 do not have direct access to USB devices
 connected to the Windows host by default. To make a USB device available inside
@@ -22,7 +32,7 @@ WSL2 (and optionally to Docker containers), use `usbipd-win`:
 
 7. Identify video feed vs control nodes: `udevadm info --query=property --name=/dev/video<#>` (video feed will have `ID_V4L_CAPABILITIES=:capture:`)
 
-8. Mount the video feeds in docker-compose file under `<service>.devices`.
+8. Mount the video feeds in docker-compose file under `<service>.devices`
 
 9. Test video streaming with Video4Linux2: `v4l2-ctl --verbose --stream-mmap --stream-count=100 --stream-to=frame.raw`. If frames are dropped, you can try reducing the width/height with `v4l2-ctl --set-fmt-video=width=640,height=480,pixelformat=MJPG` and frame rate with `v4l2-ctl --set-parm=15`.
 

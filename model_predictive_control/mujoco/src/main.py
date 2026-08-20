@@ -4,6 +4,7 @@ os.environ.setdefault("MUJOCO_GL", "osmesa")
 
 import gymnasium as gym
 
+import mpc
 from utils_video import save_video_from_frame_list
 
 
@@ -23,6 +24,7 @@ class Config():
 def main(args: Config) -> None:
 
     env = gym.make("Ant-v5", render_mode="rgb_array")
+    sim_env = gym.make("Ant-v5") # For MPC rollouts
 
     observation, info = env.reset(seed=args.SEED)
     print("Observation shape:", observation.shape)
@@ -36,7 +38,9 @@ def main(args: Config) -> None:
 
     for step in range(args.TOTAL_ENV_STEPS):
 
-        action = env.action_space.sample()
+        # action = env.action_space.sample()
+        qpos, qvel = mpc.get_state(env)
+        action = mpc.identify_next_action(sim_env, qpos, qvel)
         observation, reward, terminated, truncated, info = env.step(action)
         iter_total_reward += reward
 
@@ -78,6 +82,7 @@ def main(args: Config) -> None:
     print(f"Best reward {best_reward} at iteration {best_iteration}")
     print(f"All rewards:\n {', '.join([f'Iter {k}:{round(float(v), 3)}' for k,v in all_iteration_rewards.items()])}")
     env.close()
+    sim_env.close()
 
 
 if __name__ == "__main__":
